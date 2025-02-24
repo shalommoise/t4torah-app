@@ -1,0 +1,26 @@
+{
+  "name": "time4torah-app",
+  "version": "1.0.0",
+  "description": "App to code all time4torah promgrams ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shalommoise/t4torah-app.git"
+  },
+  "keywords": [
+    "torah",
+    "Judaism"
+  ],
+  "author": "Shalom Moise",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shalommoise/t4torah-app/issues"
+  },
+  "homepage": "https://github.com/shalommoise/t4torah-app#readme",
+  "dependencies": {
+    "axios": "^1.7.9"
+  }
+}
