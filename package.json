@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/shalommoise/t4torah-app#readme",
   "dependencies": {
-    "axios": "^1.7.9"
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "mysql": "^2.18.1"
   }
 }
