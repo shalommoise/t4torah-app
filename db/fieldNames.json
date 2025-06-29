@@ -1,0 +1,125 @@
+{
+    "dates_table": {
+        "name": "dates_table",
+        "fields": [
+            {
+                "field_name": "date_id",
+                "type": "int",
+                "extra_info": "NOT NULL AUTO_INCREMENT"
+            },
+            {
+                "field_name": "gregorian_date",
+                "type": "varchar(255)",
+                "extra_info": "NOT NULL"
+            },
+            {
+                "field_name": "hebrew_date",
+                "type": "varchar(255)"
+            },
+            {
+                "field_name": "day_of_week",
+                "type": "int",
+                "extra_info": "NOT NULL"
+            },
+            {
+                "field_name": "is_yom_tov",
+                "type": "boolean"
+            }
+        ],
+        "info": "PRIMARY KEY (date_id)"
+    },
+    "sedarim_table": {
+        "fields": [
+            {
+                "field_name": "seder_id",
+                "type": "int",
+                "extra_info": "NOT NULL AUTO_INCREMENT"
+            },
+            {
+                "field_name": "seder_name",
+                "type": "varchar(255)",
+                "extra_info": "NOT NULL"
+            },
+            {
+                "field_name": "alt_names",
+                "type": "varchar(255)"
+            }
+        ],
+        "info": "PRIMARY KEY (seder_id)"
+    },
+    "masechta_table": {
+        "fields": [
+            {
+                "field_name": "masechta_id",
+                "type": "int",
+                "extra_info": "NOT NULL AUTO_INCREMENT"
+            },
+            {
+                "field_name": "masechta_name",
+                "type": "varchar(255)",
+                "extra_info": "NOT NULL"
+            },
+            {
+                "field_name": "alt_names",
+                "type": "varchar(255)"
+            },
+            {
+                "field_name": "seder_id",
+                "type": "int"
+            },
+            {
+                "field_name": "masechta_summary_sheet",
+                "type": "varchar(255)"
+            }
+        ],
+        "info": "PRIMARY KEY (masechta_id) \n FOREIGN KEY (seder_id) REFERENCES sedarim_table(seder_id)"
+    },
+    "mishnayos_table": {
+        "fields": [
+            {
+                "field_name": "mishna_id",
+                "type": "int",
+                "extra_info": "NOT NULL AUTO_INCREMENT"
+            },
+            {
+                "field_name": "masechta_id",
+                "type": "int"
+            },
+            {
+                "field_name": "perek",
+                "type": "int",
+                "extra_info": "NOT NULL"
+            },
+            {
+                "field_name": "mishna",
+                "type": "int",
+                "extra_info": "NOT NULL"
+            },
+            {
+                "field_name": "mishna_text",
+                "type": "TEXT",
+                "extra_info": "NOT NULL"
+            }
+        ],
+        "info": "PRIMARY KEY (mishna_id) FOREIGN KEY (masechta_id) REFERENCES masechta_table(masechta_id)\n"
+    },
+    "time4mishna_shiurim": {
+        "fields": [
+            {
+                "field_name": "time4mishna_shiur_id",
+                "type": "int",
+                "extra_info": "NOT NULL AUTO_INCREMENT"
+            },
+            {
+                "field_name": "shiur_title",
+                "type": "varchar(30)",
+                "extra_info": "UNIQUE"
+            },   {
+                "field_name": "",
+                "type": "varchar(30)",
+                "extra_info": ""
+            }
+        ],
+        "info": ""
+    }
+}
