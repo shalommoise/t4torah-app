@@ -5,7 +5,8 @@ CREATE TABLE dates_table (
     date_id INT NOT NULL AUTO_INCREMENT,
     gregorian_date VARCHAR(12) NOT NULL,
     hebrew_date VARCHAR(12),
-    day_of_week INT NOT NULL,
+    hebrew_date_he VARCHAR(20),
+    day_of_week VARCHAR(12),
     is_yom_tov BOOLEAN,
     PRIMARY KEY (date_id)
 );
