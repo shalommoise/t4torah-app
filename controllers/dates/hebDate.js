@@ -5,7 +5,7 @@ const axios = require("axios");
 const hebDatCalBaseURL = "https://www.hebcal.com/hebcal?v=1&cfg=json";
 
 const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'];
-const yomTovs = ["15th of Nissan", "16th of Nissan", "21st of Nissan", "22nd of Nissan", "6th of Sivan", "7th of Sivan", "1st of Tishrei",
+const yomTovs = ["15th of Nisan", "16th of Nisan", "21st of Nisan", "22nd of Nisan", "6th of Sivan", "7th of Sivan", "1st of Tishrei",
     "2nd of Tishrei", "10th of Tishrei","15th of Tishrei", "16th of Tishrei", "22nd of Tishrei", "23rd of Tishrei"
 ]
 const specialDays = require("./specialDates.json");
@@ -13,7 +13,7 @@ const removeApostraphes =(str)=>{
     return str.split("'").join("").split("׳").join("").split('״').join("").replace(/Iyyar/g, "Iyar").split(",")[0];
 }
 const checkIfYomTov = (titleDate) =>{
-     return yomTovs.includes(titleDate);
+     return yomTovs.includes(removeApostraphes(titleDate));
 }
 
 exports.getDateRange = (start, end) => {
