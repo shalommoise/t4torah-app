@@ -7,11 +7,11 @@ const endDate = "2035-12-31";
   async function createDates() {
   // Simulate async work
   const result =  getDateRange(startDate, endDate).then(dateRange => {
-    let str = `INSERT INTO dates_table (gregorian_date, hebrew_date,hebrew_date_he,day_of_week, is_yom_tov)VALUES`;
+    let str = `INSERT INTO dates_table (gregorian_date, hebrew_date,hebrew_date_he,day_of_week,is_yom_tov,special_date)VALUES`;
     dateRange.forEach(dateItem => {
         // date_id	gregorian_date	hebrew_date	hebrew_date_he	day_of_week	is_yom_tov
-        const {date,hdate,hebrewDate, dayOfWeek, isYomTov } = dateItem;
-        str += `('${date}','${hdate}','${hebrewDate}','${dayOfWeek}', ${isYomTov}),`
+        const {date,hdate,hebrewDate, dayOfWeek, isYomTov,specialDay } = dateItem;
+        str += `('${date}','${hdate}','${hebrewDate}','${dayOfWeek}', ${isYomTov},'${specialDay}'),`
     });
    str = str.substring(0, str.length - 1);
     str+= ";";

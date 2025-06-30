@@ -17,4 +17,4 @@ const tomorrowsDate = new Date(Date.now() + millisecondInDay)
 console.log( correctFormattedDate(todaysDate),"\n tomrrows date: " , correctFormattedDate(tomorrowsDate));
 const {getDateRange} = require("./hebDate");
 
-getDateRange("2025-06-29","2025-07-31")
+// getDateRange("2025-06-29","2025-07-31")

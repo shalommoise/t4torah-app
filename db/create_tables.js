@@ -29,3 +29,16 @@ async function getDates() {
 }
 
 getDates();
+// connection.query(`INSERT INTO sedarim_table (seder_name,alt_names)VALUES
+//   ('Zeraim','זרעים'),
+//   ('Moed','מועד'),
+//   ('Nashim','נשים'),
+//   ('Nezikin','נזיקין'),
+//   ('Kodshim','קדשים'),
+//   ('Tahoros','טהרות')
+//   ;`,function (error, results, fields){
+//     if (error) throw error;
+//       console.log('finished adding sedarim');
+//   });
+
+  // connection.end();

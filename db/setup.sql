@@ -1,6 +1,6 @@
--- DROP DATABASE IF EXISTS time4torah_db;
--- CREATE DATABASE time4torah_db;
-
+DROP DATABASE IF EXISTS time4torah_db;
+CREATE DATABASE time4torah_db;
+USE time4torah_db;
 CREATE TABLE dates_table (
     date_id INT NOT NULL AUTO_INCREMENT,
     gregorian_date VARCHAR(12) NOT NULL,
@@ -8,6 +8,7 @@ CREATE TABLE dates_table (
     hebrew_date_he VARCHAR(20),
     day_of_week VARCHAR(12),
     is_yom_tov BOOLEAN,
+    special_date VARCHAR(100),
     PRIMARY KEY (date_id)
 );
 
