@@ -8,7 +8,7 @@ CREATE TABLE dates_table (
     hebrew_date_he VARCHAR(20),
     day_of_week VARCHAR(12),
     is_yom_tov BOOLEAN,
-    special_date VARCHAR(100),
+    special_date VARCHAR(150),
     PRIMARY KEY (date_id)
 );
 
