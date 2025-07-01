@@ -2,7 +2,7 @@
 const {getDateRange} = require("../controllers/dates/hebDate")
 // todays date
 const startDate = "2025-05-01";
-const endDate = "2035-12-31";
+const endDate = "2025-05-31";
 
   async function createDates() {
   // Simulate async work
