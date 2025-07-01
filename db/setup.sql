@@ -23,6 +23,8 @@ CREATE TABLE masechta_table (
     masechta_id INT NOT NULL AUTO_INCREMENT,
     masechta_name VARCHAR(20) NOT NULL,
     alt_names VARCHAR(100),
+    number_of_perakim INT NOT NULL,
+    number_of_mishnayos INT NOT NULL,
     seder_id INT,
     masechta_summary_sheet VARCHAR(50),
     PRIMARY KEY (masechta_id),
