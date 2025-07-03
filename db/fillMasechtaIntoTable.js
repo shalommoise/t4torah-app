@@ -1,6 +1,6 @@
-const sedarimNames = require("../data/sedarimNames.json");
-const  masechtaNames = require("../data/masechtaNames.json");
-const masechtaMoreInfo = require("../data/mishnaIndex.json");
+const sedarimNames = require("./data/sedarimNames.json");
+const  masechtaNames = require("./data/masechtaNames.json");
+const masechtaMoreInfo = require("./data/mishnaIndex.json");
 
 let mesachtaTableQuery = 'INSERT INTO masechta_table(masechta_name,alt_names,number_of_perakim,number_of_mishnayos,seder_id)VALUES';
 

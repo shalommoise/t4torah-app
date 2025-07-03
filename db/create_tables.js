@@ -13,7 +13,7 @@ connection.connect();
 
 
 // get dates query;
-const createDates = require("./create_dates");
+const createDates = require("./fillDatesIntoTable");
 async function getDates() {
   try {
     const dates = await createDates();
@@ -28,7 +28,7 @@ async function getDates() {
     console.error("Error:", err);
   }
 }
-const mesachtaTableQuery = require("./create_masechtas");
+const mesachtaTableQuery = require("./fillMasechtaIntoTable");
 getDates().then(()=>{
 connection.query(`INSERT INTO sedarim_table (seder_name,alt_names)VALUES
   ('Zeraim','זרעים'),
