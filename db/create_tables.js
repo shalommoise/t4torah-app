@@ -28,7 +28,7 @@ async function getDates() {
     console.error("Error:", err);
   }
 }
-
+const mesachtaTableQuery = require("./create_masechtas");
 getDates().then(()=>{
 connection.query(`INSERT INTO sedarim_table (seder_name,alt_names)VALUES
   ('Zeraim','זרעים'),
@@ -40,7 +40,12 @@ connection.query(`INSERT INTO sedarim_table (seder_name,alt_names)VALUES
   ;`,function (error, results, fields){
     if (error) throw error;
       console.log('finished adding sedarim');
-  });
+  })
+
+  connection.query(mesachtaTableQuery , (error, results, fields)=>{
+ if (error) throw error;
+      console.log('finished adding maschtos');
+  })
 
   connection.end();
 })

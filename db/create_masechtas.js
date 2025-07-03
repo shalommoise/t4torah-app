@@ -1,81 +1,19 @@
-// CREATE TABLE masechta_table (
-//     masechta_id INT NOT NULL AUTO_INCREMENT,
-//     masechta_name VARCHAR(20) NOT NULL,
-//     alt_names VARCHAR(100),
-//     seder_id INT,
-//     masechta_summary_sheet VARCHAR(50),
-//     PRIMARY KEY (masechta_id),
-//     FOREIGN KEY (seder_id) REFERENCES sedarim_table(seder_id)
-// );
-const masechtos = [
-  ["Brachos", "Zeraim"],
-  ["Peah", "Zeraim"],
-  ["Demai", "Zeraim"],
-  ["Kilayim", "Zeraim"],
-  ["Sheviis", "Zeraim"],
-  ["Terumos", "Zeraim"],
-  ["Maasros", "Zeraim"],
-  ["Maaser Sheni", "Zeraim"],
-  ["Challah", "Zeraim"],
-  ["Orlah", "Zeraim"],
-  ["Bikkurim", "Zeraim"],
+const sedarimNames = require("../data/sedarimNames.json");
+const  masechtaNames = require("../data/masechtaNames.json");
+const masechtaMoreInfo = require("../data/mishnaIndex.json");
 
-  ["Shabbos", "Moed"],
-  ["Eiruvin", "Moed"],
-  ["Pesachim", "Moed"],
-  ["Shekalim", "Moed"],
-  ["Yuma", "Moed"],
-  ["Sukka", "Moed"],
-  ["Beitza", "Moed"],
-  ["Rosh Hashana", "Moed"],
-  ["Taanis", "Moed"],
-  ["Megilla", "Moed"],
-  ["Moed Katan", "Moed"],
-  ["Chagiga", "Moed"],
+let mesachtaTableQuery = 'INSERT INTO masechta_table(masechta_name,alt_names,number_of_perakim,number_of_mishnayos,seder_id)VALUES';
 
-  ["Yevamos", "Nashim"],
-  ["Kesubos", "Nashim"],
-  ["Nedarim", "Nashim"],
-  ["Nazir", "Nashim"],
-  ["Sotah", "Nashim"],
-  ["Gittin", "Nashim"],
-  ["Kiddushin", "Nashim"],
+for (let i =0; i< masechtaNames.length;i++) {
+const mainMaschtaName = masechtaNames[i][0];
+const sederNameOfMasechta = masechtaNames[i][1];
+const sederId = sedarimNames.indexOf(sederNameOfMasechta);
+const singleMasechetInfo = masechtaMoreInfo.filter((masechtaInfo)=>{return masechtaInfo.masechtaId === i+1})[0];
+const {masechtaNameAlt,masechtaNameAltHe,perakimNumber,mishnayosNumber} = singleMasechetInfo; 
 
-  ["Bava Kama", "Nezikin"],
-  ["Bava Metzia", "Nezikin"],
-  ["Bava Basra", "Nezikin"],
-  ["Sanhedrin", "Nezikin"],
-  ["Makkos", "Nezikin"],
-  ["Shavuos", "Nezikin"],
-  ["Eduyos", "Nezikin"],
-  ["Avoda Zara", "Nezikin"],
-  ["Avos", "Nezikin"],
-  ["Horiyos", "Nezikin"],
+mesachtaTableQuery +=`('${mainMaschtaName}','${masechtaNameAlt} | ${masechtaNameAltHe}',${perakimNumber},${mishnayosNumber},${sederId}),`;
+}
 
-  ["Zevachim", "Kodshim"],
-  ["Menachos", "Kodshim"],
-  ["Chullin", "Kodshim"],
-  ["Bechoros", "Kodshim"],
-  ["Erchin", "Kodshim"],
-  ["Temura", "Kodshim"],
-  ["Krisos", "Kodshim"],
-  ["Meilla", "Kodshim"],
-  ["Tamid", "Kodshim"],
-  ["Midos", "Kodshim"],
-  ["Kinnim", "Kodshim"],
-
-  ["Keilim", "Tahoros"],
-  ["Ohalos", "Tahoros"],
-  ["Negaim", "Tahoros"],
-  ["Parah", "Tahoros"],
-  ["Taharos", "Tahoros"],
-  ["Mikvaos", "Tahoros"],
-  ["Niddah", "Tahoros"],
-  ["Machshirin", "Tahoros"],
-  ["Zavim", "Tahoros"],
-  ["Tevul Yom", "Tahoros"],
-  ["Yadayim", "Tahoros"],
-  ["Uktzin", "Tahoros"]
-];
-const sedarim = ["",,"Moed","Nashim","Nezikin","Kodshim","Tahoros"]
-
+mesachtaTableQuery = mesachtaTableQuery.substring(0, mesachtaTableQuery.length - 1);
+    mesachtaTableQuery+= ";";
+module.exports = mesachtaTableQuery;
