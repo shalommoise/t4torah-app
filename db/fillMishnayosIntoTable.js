@@ -2,7 +2,7 @@ const masechtaInfo = require("./data/mishnaIndex.json").sort((a, b) => a.masecht
 const { getMaschetaPerek } = require("../SefariaUtils/getmishnayos")
 let mishnaQuery = 'INSER INTO mishnayos_table(masechta_id,perek,mishna,mishna_text)VALUES';
 const numberOfMasechtos = masechtaInfo.length;
-const getmasechtaByPerek = (masechtaName, perek, perakimNumber,masechtaId, iteration) => {
+const getmasechtaByPerek = (masechtaName, perek, perakimNumber, masechtaId, iteration) => {
     return getMaschetaPerek(masechtaName, perek).then((mishnaTextObj) => {
         return mishnaTextObj;
     }).then((res) => {
@@ -13,22 +13,24 @@ const getmasechtaByPerek = (masechtaName, perek, perakimNumber,masechtaId, itera
         if (perek < perakimNumber) {
             console.log(perakimNumber, perek, masechtaName)
             perek += 1;
-            return getmasechtaByPerek(masechtaName, perek, perakimNumber,masechtaId, iteration)
+            return getmasechtaByPerek(masechtaName, perek, perakimNumber, masechtaId, iteration)
         } else {
             console.log("finished fetching mishnayos for" + masechtaName)
             if (iteration < numberOfMasechtos - 1) {
                 iteration += 1;
-              return  addAllMasechtos(iteration)
+                return addAllMasechtos(iteration)
             } else {
                 console.log("Finishing fetching mishnayos for all masechtos!")
-            return mishnaQuery;
+                mishnaQuery = mishnaQuery.substring(0, mishnaQuery.length - 1);
+                mishnaQuery += ";";
+                return mishnaQuery;
             }
-        } 
+        }
     });
 }
 const addAllMasechtos = (iteration) => {
     const { masechtaNameAlt, masechtaId, perakimNumber } = masechtaInfo[iteration];
-    return getmasechtaByPerek(masechtaNameAlt, perek =1, perakimNumber, masechtaId,iteration)
+    return getmasechtaByPerek(masechtaNameAlt, perek = 1, perakimNumber, masechtaId, iteration)
 }
 
 module.exports = addAllMasechtos;
