@@ -12,7 +12,8 @@ connection.connect();
 
 // get dates query;
 const createDates = require("./fillDatesIntoTable");
-const addAllMasechtos = require("./fillMishnayosIntoTable")
+const addAllMasechtos = require("./fillMishnayosIntoTable");
+const mishnayosShiurimQuery = require("./fillMishnaShiurim");
 async function getDates() {
   try {
     const dates = await createDates();
@@ -56,6 +57,10 @@ getDates().then(() => {
     console.log('finished adding maschtos');
   })
   fetchMishnayos().then(() => {
+   connection.query(mishnayosShiurimQuery, (error, results, fields) => {
+    if (error) throw error;
+    console.log('finished adding maschtos');
+  })
     connection.end();
   })
 })
