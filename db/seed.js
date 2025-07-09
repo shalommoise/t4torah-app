@@ -4,7 +4,8 @@ var connection = mysql.createConnection({
   host: process.env.DATABASE_HOST,
   user: process.env.DATABASE_USER,
   password: process.env.DATABASE_PASSWORD,
-  database: process.env.DATABASE_NAME
+  database: process.env.DATABASE_NAME,
+  charset: 'utf8mb4'
 });
 
 connection.connect();
@@ -12,8 +13,8 @@ connection.connect();
 
 // get dates query;
 const createDates = require("./fillDatesIntoTable");
-const addAllMasechtos = require("./fillMishnayosIntoTable");
-const mishnayosShiurimQuery = require("./fillMishnaShiurim");
+const {createMishnaQuery} = require("./createMishnayosFile");
+const createMishnaShiurimQuery = require("./fillMishnaShiurim");
 async function getDates() {
   try {
     const dates = await createDates();
@@ -23,23 +24,13 @@ async function getDates() {
 
     });
 
+  } catch (err) {
+    console.error("Error:", err);
+  }
+}
 
-  } catch (err) {
-    console.error("Error:", err);
-  }
-}
-async function fetchMishnayos() {
-  try {
-    const mishnayos = await addAllMasechtos();
-    connection.query(mishnayos, function (error, results, fields) {
-      if (error) throw error;
-      console.log('finished adding mishnayos!');
-    });
-  } catch (err) {
-    console.error("Error:", err);
-  }
-}
 const mesachtaTableQuery = require("./fillMasechtaIntoTable");
+const mishnayos = require("./data/mishnayos.json")
 getDates().then(() => {
   connection.query(`INSERT INTO sedarim_table (seder_name,alt_names)VALUES
   ('Zeraim','זרעים'),
@@ -56,12 +47,20 @@ getDates().then(() => {
     if (error) throw error;
     console.log('finished adding maschtos');
   })
-  fetchMishnayos().then(() => {
-   connection.query(mishnayosShiurimQuery, (error, results, fields) => {
+mishnayos.forEach((mishnaIndex)=>{
+  const mishnaQuery = createMishnaQuery(mishnaIndex)
+  connection.query(mishnaQuery,(error, results, fields) => {
     if (error) throw error;
-    console.log('finished adding maschtos');
+    console.log('Added Mishna');
   })
+})
+console.log("added all mishnayos");
+connection.query(createMishnaShiurimQuery,(error, results, fields) => {
+    if (error) throw error;
+    console.log('finished adding shiurim');
+  })
+
     connection.end();
-  })
+ 
 })
 

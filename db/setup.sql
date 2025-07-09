@@ -35,10 +35,11 @@ CREATE TABLE mishnayos_table (
     masechta_id INT,
     perek INT NOT NULL,
     mishna INT NOT NULL,
-    mishna_text TEXT NOT NULL,
+    mishna_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
     PRIMARY KEY (mishna_id),
     FOREIGN KEY (masechta_id) REFERENCES masechta_table(masechta_id)
-);
+) CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 
 CREATE TABLE time4mishna_shiurim (
     time4mishna_shiur_id INT NOT NULL AUTO_INCREMENT,
