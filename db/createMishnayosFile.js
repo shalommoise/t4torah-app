@@ -47,14 +47,6 @@ const addAllMasechtos = (iteration) => {
 addAllMasechtos(0)
 
 
-const createMishnaQuery = (mishnaObj)=>{
-    const {masechtaId,perek,mishnaNumber,mishnaText} = mishnaObj
-const mishnaQuery = `INSERT INTO mishnayos_table(masechta_id,perek,mishna,mishna_text)VALUES
-(${masechtaId},${perek},${mishnaNumber},'${mishnaText}');
-`;
-return mishnaQuery;
-}
 
-module.exports = {createMishnaQuery};
 
 
