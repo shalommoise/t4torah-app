@@ -44,5 +44,9 @@ CREATE TABLE mishnayos_table (
 CREATE TABLE time4mishna_shiurim (
     time4mishna_shiur_id INT NOT NULL AUTO_INCREMENT,
     shiur_title VARCHAR(30) UNIQUE,
-    PRIMARY KEY (time4mishna_shiur_id)
+    start_mishna INT,
+    end_mishna INT,
+    PRIMARY KEY (time4mishna_shiur_id),
+    FOREIGN KEY (start_mishna) REFERENCES mishnayos_table(mishna_id),
+    FOREIGN KEY (end_mishna) REFERENCES mishnayos_table(mishna_id)
 );
