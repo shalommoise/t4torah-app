@@ -8,7 +8,7 @@ const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 const yomTovs = ["15th of Nisan", "16th of Nisan", "21st of Nisan", "22nd of Nisan", "6th of Sivan", "7th of Sivan", "1st of Tishrei",
   "2nd of Tishrei", "10th of Tishrei", "15th of Tishrei", "16th of Tishrei", "22nd of Tishrei", "23rd of Tishrei"
 ]
-const specialDays = require("./specialDates.json");
+const specialDays = require("../../db/data/specialDates.json");
 const removeApostraphes = (str) => {
   return str.split("'").join("").split("׳").join("").split('״').join("").replace(/Iyyar/g, "Iyar").split(",")[0];
 }
