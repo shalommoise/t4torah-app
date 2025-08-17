@@ -14,14 +14,14 @@ CREATE TABLE dates_table (
 
 CREATE TABLE sedarim_table (
     seder_id INT NOT NULL AUTO_INCREMENT,
-    seder_name VARCHAR(15) NOT NULL,
+    seder_name VARCHAR(15) NOT NULL UNIQUE,
     alt_names VARCHAR(50),
     PRIMARY KEY (seder_id)
 );
 
 CREATE TABLE masechta_table (
     masechta_id INT NOT NULL AUTO_INCREMENT,
-    masechta_name VARCHAR(20) NOT NULL,
+    masechta_name VARCHAR(20) NOT NULL UNIQUE,
     alt_names VARCHAR(100),
     number_of_perakim INT NOT NULL,
     number_of_mishnayos INT NOT NULL,
@@ -50,3 +50,6 @@ CREATE TABLE time4mishna_shiurim (
     FOREIGN KEY (start_mishna) REFERENCES mishnayos_table(mishna_id),
     FOREIGN KEY (end_mishna) REFERENCES mishnayos_table(mishna_id)
 );
+
+-- mysql -u root < C:\xampp\htdocs\T4M\db\setup.sql
+
