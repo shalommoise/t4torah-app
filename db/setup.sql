@@ -52,14 +52,14 @@ CREATE TABLE time4mishna_shiurim (
 );
 
 CREATE TABLE time4mishna_daily_schedule (
-  daily_scheudle_id INT NOT NULL AUTO_INCREMENT,
+  daily_schedule_id INT NOT NULL AUTO_INCREMENT,
   shiur_type VARCHAR(25),
   time4mishna_shiur_id INT,
   date_id INT NOT NULL,
-   PRIMARY KEY (daily_scheudle_id),
+  additonal_notice VARCHAR(255),
+  PRIMARY KEY (daily_schedule_id),
   FOREIGN KEY (time4mishna_shiur_id) REFERENCES time4mishna_shiurim(time4mishna_shiur_id),
   FOREIGN KEY (date_id) REFERENCES time4mishna_shiurim(dates_table)
-
 ); 
 -- mysql -u root < C:\xampp\htdocs\T4M\db\setup.sql
 
