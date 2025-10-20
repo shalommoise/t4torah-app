@@ -28,6 +28,7 @@ const mishnayosTable = require("./fillIntoMishnayostable")
 
 // Add rows to dates table
 getDates().then(async () => {
+  console.log("Completed adding to Dates table")
   const connection = await getConnection();
   const sedarimQuery = `INSERT INTO sedarim_table (seder_name,alt_names)
   VALUES ?`;
@@ -41,6 +42,7 @@ getDates().then(async () => {
     }
   }).then(() => {
     // add rows to maschtosTable
+    console.log("Completed adding to Sedarim table.");
     const { mesachtaTableQuery, masechtaTableValues } = masechtaTable;
     return connection.query(mesachtaTableQuery, [masechtaTableValues], (err, results) => {
       if (err) {
@@ -52,6 +54,7 @@ getDates().then(async () => {
     });
     // Add rows to Mishnayos Table
   }).then(() => {
+    console.log("Completed adding to Masechtos table.");
     const { mishnayosQuery, mishnayosValues } = mishnayosTable;
 
     const addMishnayosToTable = async (arr, query) => {
@@ -68,14 +71,14 @@ getDates().then(async () => {
         connection.release?.(); // if it's a pool connection
         // or await connection.end(); if it's a single connection
         await pool.end();
+        console.log("Successfully inserted rows into Mishnayos Table.");
+        console.log("Initial seed complete - now run 'node db/fillMishnaShiurim.js'")
+       
       }
     };
     addMishnayosToTable(mishnayosValues, mishnayosQuery);
-    console.log("Successfully inserted rows into Mishnayos Table");
-    // connection.release()
-    
-    // const { mishnayosArr, insertToShiurim } = require("./fillMishnaShiurim");
-    // insertToShiurim(mishnayosArr)
+
+    connection.release()
 
   })
 

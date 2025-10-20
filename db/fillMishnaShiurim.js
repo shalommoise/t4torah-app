@@ -1,12 +1,5 @@
 
 
-const shiurimQuery = `INSERT INTO time4mishna_shiurim(shiur_title)
-VALUES ?`;
-const shiurimValues = require("./data/tim4mishna_shiurim_titles.json").map((title) => [title])
-
-const mishnaShiurimTable = { shiurimQuery, shiurimValues };
-
-
 const fs = require("fs");
 
 const fileWIthMishnayos = fs.readFileSync("./db/data/t4mshiurim_splitMIhsnayos.csv", "utf-8").split("\n");
@@ -91,7 +84,7 @@ const addShiur = async (title, startMishna, endMishna) => {
              VALUES (?, ?, ?)`,
             [title, startMishna, endMishna]
         );
-        console.log("Shiur added successfully:", title);
+        // console.log("Shiur added successfully:", title);
     } catch (err) {
         console.error("Error adding shiur:", err.message);
         throw err; // rethrow if you want the calling code to know it failed
@@ -116,7 +109,7 @@ const insertToShiurim = async (arr, i = 0) => {
         const firstMishnaId = await getmishnaId(firstMasechtaId, firstPerek, firstMishna);
         const lastMishnaId = await getmishnaId(lastMasechtaId, lastPerek, lastMishna);
         await addShiur(shiurTitle, firstMishnaId, lastMishnaId);
-        console.log(`✅ Added shiur: ${shiurTitle}`);
+        // console.log(`✅ Added shiur: ${shiurTitle}`);
     } catch (err) {
         console.error(`❌ Error adding shiur: ${shiurTitle}`, err);
     } 
@@ -126,4 +119,3 @@ const insertToShiurim = async (arr, i = 0) => {
 
 
 insertToShiurim(mishnayosArr, 0)
-module.exports = {mishnayosArr ,insertToShiurim };

@@ -5,6 +5,7 @@ const startDate = "2025-05-01";
 const endDate = "2025-05-03";
 
 async function createDates() {
+  console.log(`Attempting to add date range ${startDate} - ${endDate} to dates table.`);
   const dateTableQuery = `INSERT INTO dates_table (gregorian_date, hebrew_date,hebrew_date_he,day_of_week,is_yom_tov,special_date)
   VALUES ?`;
   // Simulate async work
