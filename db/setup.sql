@@ -43,7 +43,7 @@ CREATE TABLE mishnayos_table (
 
 CREATE TABLE time4mishna_shiurim (
     time4mishna_shiur_id INT NOT NULL AUTO_INCREMENT,
-    shiur_title VARCHAR(30) UNIQUE,
+    shiur_title VARCHAR(40) UNIQUE,
     start_mishna INT,
     end_mishna INT,
     PRIMARY KEY (time4mishna_shiur_id),
@@ -59,7 +59,6 @@ CREATE TABLE time4mishna_daily_schedule (
   additonal_notice VARCHAR(255),
   PRIMARY KEY (daily_schedule_id),
   FOREIGN KEY (time4mishna_shiur_id) REFERENCES time4mishna_shiurim(time4mishna_shiur_id),
-  FOREIGN KEY (date_id) REFERENCES time4mishna_shiurim(dates_table)
+  FOREIGN KEY (date_id) REFERENCES dates_table(date_id)
 ); 
--- mysql -u root < C:\xampp\htdocs\T4M\db\setup.sql
 
