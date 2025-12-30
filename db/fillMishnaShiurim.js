@@ -98,6 +98,7 @@ const addShiur = async (title, startMishna, endMishna) => {
 const insertToShiurim = async (arr, i = 0) => {
     if (i >= arr.length - 1) {
         console.log("✅ All shiurim added.");
+        console.log("Now run 'npm run createSchedule'");
         await pool.end();
         return;
     }
