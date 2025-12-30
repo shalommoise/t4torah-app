@@ -72,7 +72,7 @@ getDates().then(async () => {
         // or await connection.end(); if it's a single connection
         await pool.end();
         console.log("Successfully inserted rows into Mishnayos Table.");
-        console.log("Initial seed complete - now run 'node db/fillMishnaShiurim.js'")
+        console.log("Initial seed complete - now run 'npm run fillMishnaShiurim'");
        
       }
     };
