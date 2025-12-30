@@ -1,8 +1,10 @@
 //  add dates
 const { getDateRange } = require("../controllers/dates/hebDate");
 // todays date
-const startDate = "2025-05-01";
-const endDate = "2025-05-03";
+require('dotenv').config();
+
+const startDate = process.env.DATE_START ? process.env.DATE_START : "2025-05-01";
+const endDate = process.env.DATE_END ? process.env.DATE_END : "2025-06-01"; 
 
 async function createDates() {
   console.log(`Attempting to add date range ${startDate} - ${endDate} to dates table.`);
