@@ -1,11 +1,9 @@
-const { connection } = require("./mysql");
+const { getConnection,pool} = require("./mysql.js");
 require('dotenv').config();
 
-const scheduleStart = process.env.SCHEDULE_START;
-// console.log(scheduleStart)
-const mishnaIdStart = process.env.MISHNA_START_ID;
+const scheduleStart = process.env.SCHEDULE_START ? process.env.SCHEDULE_START : "2025-05-01";
+const mishnaIdStart = process.env.MISHNA_START_ID ? process.env.MISHNA_START_ID : 1;
 
-// Get start Date
 const getDateId = async (date) => {
     let connection;
     try {
@@ -34,8 +32,6 @@ const getDateId = async (date) => {
     }
 }
 
-// now that we have start date and start mishna we need logic to add into schesule
-
 const getShiur = async (shiur_id) => {
     let connection;
     try {
@@ -51,7 +47,6 @@ const getShiur = async (shiur_id) => {
             console.warn(`No shiur found for shiur id  = ${shiur_id}`);
             return null;
         }
-
         return rows[0];
     } catch (err) {
         console.error("Error getting shiur:", err.message);
@@ -62,19 +57,17 @@ const getShiur = async (shiur_id) => {
         }
     }
 }
-//   shiur_type VARCHAR(25),
-//   time4mishna_shiur_id INT,
-//   date_id INT NOT NULL,
 
 const getDateDetails = async (date_id) => {
+
     let connection;
     try {
         connection = await getConnection();
         const [rows] = await connection.query(
-            `SELECT * 
+            `SELECT *
              FROM dates_table 
              WHERE date_id = ?`,
-            [dateId]
+            [date_id]
         );
 
         if (rows.length === 0) {
@@ -93,28 +86,95 @@ const getDateDetails = async (date_id) => {
         }
     }
 };
-const insertIntoSchedule = async (scheduleObj) =>{}
-const calculateSchedule = (dateObj,shiurObj)=>{
+
+const calculateSchedule = (shiur) => {
     const scheduleObj = {};
+scheduleObj.date_id = shiur.date_id;
+    scheduleObj.additonal_notice =  shiur.dateObj.special_date;
     // figure out what shiur it should be based on the date
-    if(dateObj.is_yom_tov) {
+    if (shiur.dateObj.is_yom_tov) {
         // skip 
-    } 
-    if (dateObj.day_of_week === "Friday" || dateObj.day_of_week === "Shabbos") {
+        scheduleObj.shiur_type = null;
+        scheduleObj.shiur_id = null;
+    } else if (shiur.dateObj.day_of_week === "Friday" || shiur.dateObj.day_of_week === "Shabbos") {
         // Chazara
-        
+        scheduleObj.shiur_type = "chazara";
+        scheduleObj.shiur_id = null;
+
     } else {
         // regular schedule 
         scheduleObj.shiur_type = "regular";
-        scheduleObj.date_id = dateObj.date_id;
-        scheduleObj.shiur_id = shiurObj.shiur_id;
+        scheduleObj.shiur_id = shiur.time4mishna_shiur_id;
     }
+    return scheduleObj;
+}
 
-    if(dateObj.special_date =="erev"){
-// needs REGEX 
-// get Yom TOV Summary
-scheduleObj.additonal_notice = dateObj.special_date
+const insertIntoSchedule = async (scheduleObj) => {
+    const {shiur_type, shiur_id, date_id,additonal_notice} = scheduleObj;
+    // console.log(shiur_id)
+    let connection;
+    try {
+        connection = await getConnection();
+        await connection.query(
+            `INSERT INTO time4mishna_daily_schedule (shiur_type, time4mishna_shiur_id, date_id, additonal_notice)
+             VALUES (?, ?, ?,?)`,
+            [shiur_type, shiur_id, date_id, additonal_notice]
+        );
+    } catch (err) {
+        console.log(err)
+    } finally {
+        if (connection) {
+            connection.release();
+        } 
     }
 }
 
+
+async function buildFullSchedule(startDateId, startShiurId) {
+  try {
+    let dateId = Number(startDateId);
+    let shiurId = Number(startShiurId);
+
+    while (true) {
+
+      // stop if either ran out
+      if (!dateId || !shiurId) break;
+
+      const [dateObj, shiur] = await Promise.all([
+        getDateDetails(dateId),
+        getShiur(shiurId)
+      ]);
+
+      // stop when DB has no more
+      if (!dateObj || !shiur) break;
+
+      shiur.date_id = dateId;
+      shiur.dateObj = dateObj;
+
+      const scheduleObj = calculateSchedule(shiur);
+      console.log(scheduleObj)
+      await insertIntoSchedule(scheduleObj);
+
+      // 👉 advance to the next pair
+      dateId = dateId + 1;
+      shiurId = scheduleObj.shiur_id ? shiurId + 1: shiurId;
+
+    //   console.log("Next:", dateId, shiurId);
+    }
+
+    console.log("Finished building schedule");
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
+async function main() {
+//   console.log(startDateId);
+const startDateId = await getDateId(scheduleStart);
+await buildFullSchedule(startDateId, mishnaIdStart);
+await pool.end();
+}
+
+main().catch(console.error);
 

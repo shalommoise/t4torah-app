@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "description": "App to code all time4torah promgrams ",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "test": "jest --watch",
-    "seed": "node db/seed.js"
+    "seed": "node db/seed.js",
+    "fillMishnaShiurim": "node db/fillMishnaShiurim.js",
+    "createSchedule": "node db/createSchedule.js"
   },
   "repository": {
     "type": "git",
