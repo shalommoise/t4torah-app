@@ -4,8 +4,8 @@ USE time4torah_db;
 CREATE TABLE dates_table (
     date_id INT NOT NULL AUTO_INCREMENT,
     gregorian_date VARCHAR(12) NOT NULL,
-    hebrew_date VARCHAR(12),
-    hebrew_date_he VARCHAR(20),
+    hebrew_date VARCHAR(30),
+    hebrew_date_he VARCHAR(30),
     day_of_week VARCHAR(12),
     is_yom_tov BOOLEAN,
     special_date VARCHAR(150),
