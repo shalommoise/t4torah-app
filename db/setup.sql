@@ -88,3 +88,12 @@ CREATE TABLE time4mishna_daily_schedule (
   FOREIGN KEY (date_id) REFERENCES dates_table(date_id)
 ); 
 
+CREATE TABLE time4nach_shiurim (
+    time4nach_shiur_id INT NOT NULL AUTO_INCREMENT,
+    shiur_title VARCHAR(50) UNIQUE,
+    sefer_id INT NOT NULL,
+    perek INT NOT NULL,
+    PRIMARY KEY (time4nach_shiur_id),
+    FOREIGN KEY (sefer_id) REFERENCES tanach_table(sefer_id)
+);
+

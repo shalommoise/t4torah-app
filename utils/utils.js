@@ -30,6 +30,17 @@ const parseShiurTitle = (title) => {
     return result;
 }
 
+const  dbFriendlyTitle = (title) => {
+  if (!title) return '';
+  
+  return title
+    .trim()
+    .replace(/\s+/g, '_')          // spaces → underscores
+    .replace(/[^a-zA-Z0-9_]/g, '') // remove non-alphanumeric / underscore
+    .toLowerCase();
+}
 
 
-module.exports = { parseShiurTitle }
+
+
+module.exports = { parseShiurTitle,dbFriendlyTitle }

@@ -26,6 +26,7 @@ async function getDates() {
 const masechtaTable = require("./fillMasechtaIntoTable");
 const mishnayosTable = require("./fillIntoMishnayostable");
 const tanachTable = require("./fillTanachTable");
+const time4nachTable = require("./fillNachShiurim")
 // Add rows to dates table
 getDates().then(async () => {
   console.log("Completed adding to Dates table")
@@ -41,9 +42,21 @@ getDates().then(async () => {
       console.log('Successfully inserted rows into Sedarim Table:', results.affectedRows);
     }
   }).then(() => {
-    // adding nach table
+    // adding tanach table
     const { tanachTableQuery, tanachTableValues } = tanachTable;
     return connection.query(tanachTableQuery, [tanachTableValues], (err, results) => {
+      if (err) {
+        console.error('Insert error:', err);
+        connection.end();
+      } else {
+        console.log('Successfully inserted rows into Tanach Table:', results.affectedRows);
+      }
+    })
+  }).then(()=>{
+    const {nachEntries,nachTableQuery} = time4nachTable;
+    // adding time4nach table
+
+    return connection.query(nachTableQuery, [nachEntries], (err, results) => {
       if (err) {
         console.error('Insert error:', err);
         connection.end();
