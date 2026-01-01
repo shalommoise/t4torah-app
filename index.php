@@ -6,6 +6,6 @@
     <title>T4M PROJECT</title>
 </head>
 <body>
-    <h1>Tiem4Torah AUtomate</h1>
+    <h1>Time4Torah Automate</h1>
 </body>
 </html>
