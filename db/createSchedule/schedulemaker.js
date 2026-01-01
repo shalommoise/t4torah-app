@@ -1,4 +1,4 @@
-const { getConnection} = require("../mysql.js");
+const { getConnection,pool } = require("../mysql.js");
 
 const getDateId = async (date) => {
     let connection;
@@ -28,7 +28,7 @@ const getDateId = async (date) => {
     }
 }
 
-const getShiur = async (shiur_id, tableName) => { 
+const getShiur = async (shiur_id, tableName) => {
     let connection;
     try {
         connection = await getConnection();
@@ -85,8 +85,8 @@ const getDateDetails = async (date_id) => {
 
 const calculateSchedule = (shiur, tableName) => {
     const scheduleObj = {};
-scheduleObj.date_id = shiur.date_id;
-    scheduleObj.additonal_notice =  shiur.dateObj.special_date;
+    scheduleObj.date_id = shiur.date_id;
+    scheduleObj.additonal_notice = shiur.dateObj.special_date;
     // figure out what shiur it should be based on the date
     if (shiur.dateObj.is_yom_tov) {
         // skip 
@@ -106,7 +106,7 @@ scheduleObj.date_id = shiur.date_id;
 }
 
 const insertIntoSchedule = async (scheduleObj, tableName) => {
-    const {shiur_type, shiur_id, date_id,additonal_notice} = scheduleObj;
+    const { shiur_type, shiur_id, date_id, additonal_notice } = scheduleObj;
     // console.log(shiur_id)
     let connection;
     try {
@@ -121,48 +121,52 @@ const insertIntoSchedule = async (scheduleObj, tableName) => {
     } finally {
         if (connection) {
             connection.release();
-        } 
+        }
     }
 }
 
 
 async function buildFullSchedule(startDateId, startShiurId, tableName) {
-  try {
-    let dateId = Number(startDateId);
-    let shiurId = Number(startShiurId);
+    try {
+        let dateId = Number(startDateId);
+        let shiurId = Number(startShiurId);
 
-    while (true) {
+        while (true) {
 
-      // stop if either ran out
-      if (!dateId || !shiurId) break;
+            // stop if either ran out
+            if (!dateId || !shiurId) break;
 
-      const [dateObj, shiur] = await Promise.all([
-        getDateDetails(dateId),
-        getShiur(shiurId, tableName)
-      ]);
+            const [dateObj, shiur] = await Promise.all([
+                getDateDetails(dateId),
+                getShiur(shiurId, tableName)
+            ]);
 
-      // stop when DB has no more
-      if (!dateObj || !shiur) break;
+            // stop when DB has no more
+            if (!dateObj || !shiur) break;
 
-      shiur.date_id = dateId;
-      shiur.dateObj = dateObj;
+            shiur.date_id = dateId;
+            shiur.dateObj = dateObj;
 
-      const scheduleObj = calculateSchedule(shiur, tableName);
-      console.log(scheduleObj)
-      await insertIntoSchedule(scheduleObj,tableName);
+            const scheduleObj = calculateSchedule(shiur, tableName);
+            console.log(scheduleObj)
+            await insertIntoSchedule(scheduleObj, tableName);
 
-   
-      dateId = dateId + 1;
-      shiurId = scheduleObj.shiur_id ? shiurId + 1: shiurId;
 
-  
+            dateId = dateId + 1;
+            shiurId = scheduleObj.shiur_id ? shiurId + 1 : shiurId;
+
+
+        }
+
+        console.log(`Finished building ${tableName} schedule`);
+    } catch (err) {
+        console.error(err);
     }
-
-    console.log(`Finished building ${tableName} schedule`);
-  } catch (err) {
-    console.error(err);
-  }
 }
 
-
-module.exports = {buildFullSchedule,getDateId}
+async function runSchedule(scheduleStart, startShiurId, tableName) {
+    const startDateId = await getDateId(scheduleStart);
+    await buildFullSchedule(startDateId, startShiurId, tableName);
+    await pool.end();
+}
+module.exports = { runSchedule }
