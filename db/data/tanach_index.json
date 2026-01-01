@@ -1,0 +1,47 @@
+[
+  { "order": 1, "hebrew": "בראשית", "english": "Bereishis", "alt_name": "Genesis", "chapters": 50, "section": "Torah", "section_hebrew": "תורה" },
+  { "order": 2, "hebrew": "שמות", "english": "Shemos", "alt_name": "Exodus", "chapters": 40, "section": "Torah", "section_hebrew": "תורה" },
+  { "order": 3, "hebrew": "ויקרא", "english": "Vayikra", "alt_name": "Leviticus", "chapters": 27, "section": "Torah", "section_hebrew": "תורה" },
+  { "order": 4, "hebrew": "במדבר", "english": "Bamidbar", "alt_name": "Numbers", "chapters": 36, "section": "Torah", "section_hebrew": "תורה" },
+  { "order": 5, "hebrew": "דברים", "english": "Devarim", "alt_name": "Deuteronomy", "chapters": 34, "section": "Torah", "section_hebrew": "תורה" },
+
+  { "order": 6, "hebrew": "יהושע", "english": "Yehoshua", "alt_name": "Joshua", "chapters": 24, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Rishonim", "subsection_hebrew": "נביאים ראשונים" },
+  { "order": 7, "hebrew": "שופטים", "english": "Shoftim", "alt_name": "Judges", "chapters": 21, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Rishonim", "subsection_hebrew": "נביאים ראשונים" },
+  { "order": 8, "hebrew": "שמואל א", "english": "Shmuel Aleph", "alt_name": "1 Samuel", "chapters": 31, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Rishonim", "subsection_hebrew": "נביאים ראשונים" },
+  { "order": 9, "hebrew": "שמואל ב", "english": "Shmuel Beis", "alt_name": "2 Samuel", "chapters": 24, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Rishonim", "subsection_hebrew": "נביאים ראשונים" },
+  { "order": 10, "hebrew": "מלכים א", "english": "Melachim Aleph", "alt_name": "1 Kings", "chapters": 22, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Rishonim", "subsection_hebrew": "נביאים ראשונים" },
+  { "order": 11, "hebrew": "מלכים ב", "english": "Melachim Beis", "alt_name": "2 Kings", "chapters": 25, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Rishonim", "subsection_hebrew": "נביאים ראשונים" },
+
+  { "order": 12, "hebrew": "ישעיה", "english": "Yeshaya", "alt_name": "Isaiah", "chapters": 66, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim", "subsection_hebrew": "נביאים אחרונים" },
+  { "order": 13, "hebrew": "ירמיה", "english": "Yirmiyahu", "alt_name": "Jeremiah", "chapters": 52, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim", "subsection_hebrew": "נביאים אחרונים" },
+  { "order": 14, "hebrew": "יחזקאל", "english": "Yechezkel", "alt_name": "Ezekiel", "chapters": 48, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim", "subsection_hebrew": "נביאים אחרונים" },
+
+  { "order": 15, "hebrew": "הושע", "english": "Hoshea", "alt_name": "Hosea", "chapters": 14, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 16, "hebrew": "יואל", "english": "Yoel", "alt_name": "Joel", "chapters": 4, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 17, "hebrew": "עמוס", "english": "Amos", "alt_name": "Amos", "chapters": 9, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 18, "hebrew": "עובדיה", "english": "Ovadya", "alt_name": "Obadiah", "chapters": 1, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 19, "hebrew": "יונה", "english": "Yonah", "alt_name": "Jonah", "chapters": 4, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 20, "hebrew": "מיכה", "english": "Michah", "alt_name": "Micah", "chapters": 7, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 21, "hebrew": "נחום", "english": "Nachum", "alt_name": "Nahum", "chapters": 3, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 22, "hebrew": "חבקוק", "english": "Chavakuk", "alt_name": "Habakkuk", "chapters": 3, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 23, "hebrew": "צפניה", "english": "Tzefanya", "alt_name": "Zephaniah", "chapters": 3, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 24, "hebrew": "חגי", "english": "Chaggai", "alt_name": "Haggai", "chapters": 2, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 25, "hebrew": "זכריה", "english": "Zecharya", "alt_name": "Zechariah", "chapters": 14, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+  { "order": 26, "hebrew": "מלאכי", "english": "Malachi", "alt_name": "Malachi", "chapters": 3, "section": "Nevi'im", "section_hebrew": "נביאים", "subsection": "Nevi'im Acharonim - Trei Asar", "subsection_hebrew": "נביאים אחרונים - תריסר" },
+
+  { "order": 27, "hebrew": "תהילים", "english": "Tehillim", "alt_name": "Psalms", "chapters": 150, "section": "Kesuvim", "section_hebrew": "כתובים" },
+  { "order": 28, "hebrew": "משלי", "english": "Mishlei", "alt_name": "Proverbs", "chapters": 31, "section": "Kesuvim", "section_hebrew": "כתובים" },
+  { "order": 29, "hebrew": "איוב", "english": "Iyov", "alt_name": "Job", "chapters": 42, "section": "Kesuvim", "section_hebrew": "כתובים" },
+
+  { "order": 30, "hebrew": "שיר השירים", "english": "Shir HaShirim", "alt_name": "Song of Songs", "chapters": 8, "section": "Kesuvim", "section_hebrew": "כתובים", "subsection": "Megilos", "subsection_hebrew": "מגילות" },
+  { "order": 31, "hebrew": "רות", "english": "Rus", "alt_name": "Ruth", "chapters": 4, "section": "Kesuvim", "section_hebrew": "כתובים", "subsection": "Megilos", "subsection_hebrew": "מגילות" },
+  { "order": 32, "hebrew": "איכה", "english": "Eicha", "alt_name": "Lamentations", "chapters": 5, "section": "Kesuvim", "section_hebrew": "כתובים", "subsection": "Megilos", "subsection_hebrew": "מגילות" },
+  { "order": 33, "hebrew": "קהלת", "english": "Koheles", "alt_name": "Ecclesiastes", "chapters": 12, "section": "Kesuvim", "section_hebrew": "כתובים", "subsection": "Megilos", "subsection_hebrew": "מגילות" },
+  { "order": 34, "hebrew": "אסתר", "english": "Esther", "alt_name": "Esther", "chapters": 10, "section": "Kesuvim", "section_hebrew": "כתובים", "subsection": "Megilos", "subsection_hebrew": "מגילות" },
+
+  { "order": 35, "hebrew": "דניאל", "english": "Daniel", "alt_name": "Daniel", "chapters": 12, "section": "Kesuvim", "section_hebrew": "כתובים" },
+  { "order": 36, "hebrew": "עזרא", "english": "Ezra", "alt_name": "Ezra", "chapters": 10, "section": "Kesuvim", "section_hebrew": "כתובים" },
+  { "order": 37, "hebrew": "נחמיה", "english": "Nechemiah", "alt_name": "Nehemiah", "chapters": 13, "section": "Kesuvim", "section_hebrew": "כתובים" },
+  { "order": 38, "hebrew": "דברי הימים א", "english": "Divrei HaYamim Aleph", "alt_name": "1 Chronicles", "chapters": 29, "section": "Kesuvim", "section_hebrew": "כתובים" },
+  { "order": 39, "hebrew": "דברי הימים ב", "english": "Divrei HaYamim Beis", "alt_name": "2 Chronicles", "chapters": 36, "section": "Kesuvim", "section_hebrew": "כתובים" }
+]

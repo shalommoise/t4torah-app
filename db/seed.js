@@ -24,8 +24,8 @@ async function getDates() {
 }
 
 const masechtaTable = require("./fillMasechtaIntoTable");
-const mishnayosTable = require("./fillIntoMishnayostable")
-
+const mishnayosTable = require("./fillIntoMishnayostable");
+const tanachTable = require("./fillTanachTable");
 // Add rows to dates table
 getDates().then(async () => {
   console.log("Completed adding to Dates table")
@@ -40,6 +40,17 @@ getDates().then(async () => {
     } else {
       console.log('Successfully inserted rows into Sedarim Table:', results.affectedRows);
     }
+  }).then(() => {
+    // adding nach table
+    const { tanachTableQuery, tanachTableValues } = tanachTable;
+    return connection.query(tanachTableQuery, [tanachTableValues], (err, results) => {
+      if (err) {
+        console.error('Insert error:', err);
+        connection.end();
+      } else {
+        console.log('Successfully inserted rows into Tanach Table:', results.affectedRows);
+      }
+    })
   }).then(() => {
     // add rows to maschtosTable
     console.log("Completed adding to Sedarim table.");
@@ -73,7 +84,7 @@ getDates().then(async () => {
         await pool.end();
         console.log("Successfully inserted rows into Mishnayos Table.");
         console.log("Initial seed complete - now run 'npm run fillMishnaShiurim'");
-       
+
       }
     };
     addMishnayosToTable(mishnayosValues, mishnayosQuery);

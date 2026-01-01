@@ -40,6 +40,32 @@ CREATE TABLE mishnayos_table (
     FOREIGN KEY (masechta_id) REFERENCES masechta_table(masechta_id)
 ) CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+CREATE TABLE tanach_table (
+    sefer_id INT NOT NULL AUTO_INCREMENT,
+    sefer_name VARCHAR(50) NOT NULL,
+    sefer_name_he VARCHAR(50) NOT NULL,
+    sefer_alt_name VARCHAR(50) NOT NULL,
+    sefer_chapter_count INT NOT NULL,
+    section ENUM('Torah',"Nevi'im",'Kesuvim') NOT NULL,
+    section_he ENUM('תורה','נביאים','כתובים') NOT NULL,
+    subsection ENUM(
+        "Nevi'im Rishonim",
+        "Nevi'im Acharonim",
+        "Trei Asar",
+        "Nevi'im Acharonim - Trei Asar",
+        "Megilos"
+    ) NULL,
+    subsection_he ENUM(
+        'נביאים ראשונים',
+        'נביאים אחרונים',
+        'תרי עשר',
+        'נביאים אחרונים - תריסר',
+        'מגילות'
+    ) NULL,
+
+    PRIMARY KEY (sefer_id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 
 CREATE TABLE time4mishna_shiurim (
     time4mishna_shiur_id INT NOT NULL AUTO_INCREMENT,
