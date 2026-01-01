@@ -1,8 +1,4 @@
-const { getConnection,pool} = require("./mysql.js");
-require('dotenv').config();
-
-const scheduleStart = process.env.SCHEDULE_START ? process.env.SCHEDULE_START : "2025-05-01";
-const mishnaIdStart = process.env.MISHNA_START_ID ? process.env.MISHNA_START_ID : 1;
+const { getConnection} = require("../mysql.js");
 
 const getDateId = async (date) => {
     let connection;
@@ -32,14 +28,14 @@ const getDateId = async (date) => {
     }
 }
 
-const getShiur = async (shiur_id) => {
+const getShiur = async (shiur_id, tableName) => { 
     let connection;
     try {
         connection = await getConnection();
         const [rows] = await connection.query(
             `SELECT *
-             FROM time4mishna_shiurim 
-             WHERE time4mishna_shiur_id= ?`,
+             FROM ${tableName}_shiurim 
+             WHERE ${tableName}_shiur_id= ?`,
             [shiur_id]
         );
 
@@ -87,7 +83,7 @@ const getDateDetails = async (date_id) => {
     }
 };
 
-const calculateSchedule = (shiur) => {
+const calculateSchedule = (shiur, tableName) => {
     const scheduleObj = {};
 scheduleObj.date_id = shiur.date_id;
     scheduleObj.additonal_notice =  shiur.dateObj.special_date;
@@ -104,19 +100,19 @@ scheduleObj.date_id = shiur.date_id;
     } else {
         // regular schedule 
         scheduleObj.shiur_type = "regular";
-        scheduleObj.shiur_id = shiur.time4mishna_shiur_id;
+        scheduleObj.shiur_id = shiur[`${tableName}_shiur_id`];
     }
     return scheduleObj;
 }
 
-const insertIntoSchedule = async (scheduleObj) => {
+const insertIntoSchedule = async (scheduleObj, tableName) => {
     const {shiur_type, shiur_id, date_id,additonal_notice} = scheduleObj;
     // console.log(shiur_id)
     let connection;
     try {
         connection = await getConnection();
         await connection.query(
-            `INSERT INTO time4mishna_daily_schedule (shiur_type, time4mishna_shiur_id, date_id, additonal_notice)
+            `INSERT INTO ${tableName}_daily_schedule (shiur_type, ${tableName}_shiur_id, date_id, additonal_notice)
              VALUES (?, ?, ?,?)`,
             [shiur_type, shiur_id, date_id, additonal_notice]
         );
@@ -130,7 +126,7 @@ const insertIntoSchedule = async (scheduleObj) => {
 }
 
 
-async function buildFullSchedule(startDateId, startShiurId) {
+async function buildFullSchedule(startDateId, startShiurId, tableName) {
   try {
     let dateId = Number(startDateId);
     let shiurId = Number(startShiurId);
@@ -142,7 +138,7 @@ async function buildFullSchedule(startDateId, startShiurId) {
 
       const [dateObj, shiur] = await Promise.all([
         getDateDetails(dateId),
-        getShiur(shiurId)
+        getShiur(shiurId, tableName)
       ]);
 
       // stop when DB has no more
@@ -151,30 +147,22 @@ async function buildFullSchedule(startDateId, startShiurId) {
       shiur.date_id = dateId;
       shiur.dateObj = dateObj;
 
-      const scheduleObj = calculateSchedule(shiur);
+      const scheduleObj = calculateSchedule(shiur, tableName);
       console.log(scheduleObj)
-      await insertIntoSchedule(scheduleObj);
+      await insertIntoSchedule(scheduleObj,tableName);
 
-      // 👉 advance to the next pair
+   
       dateId = dateId + 1;
       shiurId = scheduleObj.shiur_id ? shiurId + 1: shiurId;
 
-    //   console.log("Next:", dateId, shiurId);
+  
     }
 
-    console.log("Finished building schedule");
+    console.log(`Finished building ${tableName} schedule`);
   } catch (err) {
     console.error(err);
   }
 }
 
 
-async function main() {
-//   console.log(startDateId);
-const startDateId = await getDateId(scheduleStart);
-await buildFullSchedule(startDateId, mishnaIdStart);
-await pool.end();
-}
-
-main().catch(console.error);
-
+module.exports = {buildFullSchedule,getDateId}

@@ -93,7 +93,21 @@ CREATE TABLE time4nach_shiurim (
     shiur_title VARCHAR(50) UNIQUE,
     sefer_id INT NOT NULL,
     perek INT NOT NULL,
+    -- text_he TEXT  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    -- text_eng TEXT, 
     PRIMARY KEY (time4nach_shiur_id),
     FOREIGN KEY (sefer_id) REFERENCES tanach_table(sefer_id)
-);
+)
+-- CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+;
 
+CREATE TABLE time4nach_daily_schedule (
+  daily_schedule_id INT NOT NULL AUTO_INCREMENT,
+  shiur_type VARCHAR(25),
+  time4nach_shiur_id INT,
+  date_id INT NOT NULL,
+  additonal_notice VARCHAR(255),
+  PRIMARY KEY (daily_schedule_id),
+  FOREIGN KEY (time4nach_shiur_id) REFERENCES time4nach_shiurim(time4nach_shiur_id),
+  FOREIGN KEY (date_id) REFERENCES dates_table(date_id)
+); 

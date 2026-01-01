@@ -8,7 +8,8 @@
     "test": "jest --watch",
     "seed": "node db/seed.js",
     "fillMishnaShiurim": "node db/fillMishnaShiurim.js",
-    "createSchedule": "node db/createSchedule.js"
+    "createMishnaSchedule": "node db/createSchedule/mishnaSchedule.js",
+    "createNachSchedule": "node db/createSchedule/nachSchedule.js"
   },
   "repository": {
     "type": "git",
