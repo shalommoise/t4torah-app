@@ -82,7 +82,7 @@ CREATE TABLE time4mishna_daily_schedule (
   shiur_type VARCHAR(25),
   time4mishna_shiur_id INT,
   date_id INT NOT NULL,
-  additonal_notice VARCHAR(255),
+  additional_notice VARCHAR(255),
   PRIMARY KEY (daily_schedule_id),
   FOREIGN KEY (time4mishna_shiur_id) REFERENCES time4mishna_shiurim(time4mishna_shiur_id),
   FOREIGN KEY (date_id) REFERENCES dates_table(date_id)
@@ -106,7 +106,7 @@ CREATE TABLE time4nach_daily_schedule (
   shiur_type VARCHAR(25),
   time4nach_shiur_id INT,
   date_id INT NOT NULL,
-  additonal_notice VARCHAR(255),
+  additional_notice VARCHAR(255),
   PRIMARY KEY (daily_schedule_id),
   FOREIGN KEY (time4nach_shiur_id) REFERENCES time4nach_shiurim(time4nach_shiur_id),
   FOREIGN KEY (date_id) REFERENCES dates_table(date_id)

@@ -1,5 +1,5 @@
 const { getConnection, pool } = require("../mysql.js");
-const {checkForMulitplMasechtos} = require("../../utils/utils.js")
+const { checkForMulitplMasechtos } = require("../../utils/utils.js")
 const getFridayIds = async (day) => {
     let connection;
     try {
@@ -82,10 +82,10 @@ const checkIfShiurExists = async (shiurArr) => {
         }
     }
 }
-const getFirstAndLastShiurim = async (shiurim) =>{
-    const shiurimIds = shiurim.map((shiur)=> shiur.time4mishna_shiur_id);
+const getFirstAndLastShiurim = async (shiurim) => {
+    const shiurimIds = shiurim.map((shiur) => shiur.time4mishna_shiur_id);
 
-let connection;
+    let connection;
     try {
         connection = await getConnection();
         const [rows] = await connection.query(
@@ -110,7 +110,7 @@ let connection;
         }
     }
 }
-const getFirstAndLastMishnayos = async (mishnayosShiurim) =>{
+const getFirstAndLastMishnayos = async (mishnayosShiurim) => {
     let connection;
     try {
         connection = await getConnection();
@@ -137,15 +137,15 @@ const getFirstAndLastMishnayos = async (mishnayosShiurim) =>{
     }
 }
 
-const getMasechtaNames = async (masechtaIds) =>{
-   let connection;
+const getMasechtaName = async (masechtaId) => {
+    let connection;
     try {
         connection = await getConnection();
         const [rows] = await connection.query(
             `SELECT masechta_name
              FROM masechta_table 
-             WHERE masechta_id in (?)`,
-            masechtaIds
+             WHERE masechta_id =?`,
+            [masechtaId]
         );
 
         if (rows.length === 0) {
@@ -164,43 +164,96 @@ const getMasechtaNames = async (masechtaIds) =>{
     }
 }
 
-getFridayIds("Friday")
-    .then((res) => {
-        idArr = res.map((items) => [items.date_id]);
-        return getfridayIsInSchedule(idArr)
-        .then((schdulesIds)=>{
-            // console.log(schdulesIds)
-            const example = schdulesIds[95].daily_schedule_id;
-            const arr = [example -5, example - 4, example -3 , example-2, example -1]
-           checkIfShiurExists(arr).then((shiurim)=>{
-            const firstAndLastShiurim = [shiurim[0], shiurim[shiurim.length-1]]
-            getFirstAndLastShiurim(firstAndLastShiurim).then((firstAndlast)=>{
-                const firstMishna = firstAndlast[0].start_mishna;
-                const lastMishna = firstAndlast[1].end_mishna;
-                getFirstAndLastMishnayos([firstMishna,lastMishna])
-                .then((mishnayos)=>{
-                    // c
-                    const titleArr = checkForMulitplMasechtos(mishnayos[0], mishnayos[1]);
-                    if(titleArr[0]=== 1) {
-                        // 1 maschta
-                     getMasechtaNames([titleArr[1]]).then((masechtaNames)=>{
-                        console.log(masechtaNames)
-                        console.log(`${masechtaNames[0].masechta_name} ${titleArr[2]} - ${titleArr[3]}`)
-                        return `${masechtaNames[0].masechta_name} ${titleArr[2]} - ${titleArr[3]}`
-                     })
+const getFridayAddtionalNotice = async (daily_schedule_id)=>{
+    let connection;
+    try {
+        connection = await getConnection();
+        const [rows] = await connection.query(
+            `SELECT additional_notice
+             FROM time4mishna_daily_schedule 
+             WHERE daily_schedule_id=?`,
+            [daily_schedule_id]
+        );
 
-                    } else if(titleArr[0] === 2) {
-                        // 2 masechtos 
-                        getMasechtaNames([titleArr[1], titleArr[2]]).then((masechtaNames)=>{
-                        return `${masechtaNames[0].masechta_name} ${titleArr[3]} - ${masechtaNames[1].masechta_name} ${titleArr[4]}`
-                     })
-                    }
-                })
-            })
-           })
-          
-           //get list of time4mishnashiur id
-           // get start mishna + end mishna -
-           // creat titile and modify "example"
-        })
-    })
+        if (rows.length === 0) {
+            console.warn(`No shiur found for shiur id  = ${mishnayosShiurim}`);
+            return null;
+        }
+        // console.log(rows)
+        return rows[0].additional_notice;
+    } catch (err) {
+        console.error("Error getting shiur:", err.message);
+        throw err; // rethrow so the caller knows it failed
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+}
+const updatefridayAdditionalNotice = async (daily_schedule_id, newNotice) => {
+  let connection;
+
+  try {
+    connection = await getConnection();
+
+    const [result] = await connection.query(
+      `UPDATE time4mishna_daily_schedule 
+       SET additional_notice = ?
+       WHERE daily_schedule_id = ?`,
+      [newNotice, daily_schedule_id]
+    );
+
+    return result.affectedRows;   // 1 = success, 0 = not found
+  } catch (err) {
+    console.error("Error updating column:", err.message);
+    throw err;
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+const getForAllSchedule = async () => {
+    const allFridays = await getFridayIds("friday");
+    const allFridaysIds = allFridays.map((items) => [items.date_id]);
+    const allFridaysInActiveSchedule = await getfridayIsInSchedule(allFridaysIds);
+    if (allFridaysInActiveSchedule[0].daily_schedule_id < 5) allFridaysInActiveSchedule.shift();
+    try {
+        let i = 0;
+        const titles = [];
+        while (true) {
+            if (i >= allFridaysInActiveSchedule.length - 1) break;
+            const fridayChazara = allFridaysInActiveSchedule[i].daily_schedule_id;
+
+            const toCheckIfExistisarr = [fridayChazara - 5, fridayChazara - 4, fridayChazara - 3, fridayChazara - 2, fridayChazara - 1];
+            const exisitngShiurim = await checkIfShiurExists(toCheckIfExistisarr);
+            const firstAndLastShiurim = [exisitngShiurim[0], exisitngShiurim[exisitngShiurim.length - 1]];
+            const firstAndLastShiuIds = await getFirstAndLastShiurim(firstAndLastShiurim);
+            const firstMishna = firstAndLastShiuIds[0].start_mishna;
+            const lastMishna = firstAndLastShiuIds[1].end_mishna;
+            const firstAndLastMishnayos = await getFirstAndLastMishnayos([firstMishna, lastMishna]);
+            const titleArr = checkForMulitplMasechtos(firstAndLastMishnayos[0], firstAndLastMishnayos[1]);
+            let title = '';
+            if (titleArr[0] === 1) {
+                const masechtaName = await getMasechtaName([titleArr[1]]);
+                title = `${masechtaName[0].masechta_name} ${titleArr[2]}-${titleArr[3]}`;
+
+            } else if (titleArr[0] === 2) {
+                const firstMasechtaName = await getMasechtaName([titleArr[1]]);
+                const lastMasechtaName = await getMasechtaName([titleArr[2]]);
+                title = `${firstMasechtaName[0].masechta_name} ${titleArr[3]} - ${lastMasechtaName[0].masechta_name} ${titleArr[4]}`
+            }
+            i = i + 1; 
+            const additionalNotice =  await getFridayAddtionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id);
+            const newNotice = additionalNotice ? `${title}: ${additionalNotice}` : title;
+            console.log(newNotice);
+            await updatefridayAdditionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id, newNotice);
+            // return title;
+
+        } console.log(`Finished building chazara schedule`);
+         await pool.end();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+getForAllSchedule()
