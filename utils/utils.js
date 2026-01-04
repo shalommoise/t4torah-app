@@ -40,7 +40,15 @@ const  dbFriendlyTitle = (title) => {
     .toLowerCase();
 }
 
+const checkForMulitplMasechtos = (first, last)=>{
+    if(typeof(first) !== "object" || typeof(last) !== "object") {
+        throw new Error("Not correct format");
+    } else if (first.masechta_id === last.masechta_id) {
+        return [1, first.masechta_id, `${first.perek}.${first.mishna}`, `${last.perek}.${last.mishna}`]
+    } else {
+        return [2, first.masechta_id, last.masechta_id,`${first.perek}.${first.mishna}`, `${last.perek}.${last.mishna}`]
+    }
+}
 
 
-
-module.exports = { parseShiurTitle,dbFriendlyTitle }
+module.exports = { parseShiurTitle,dbFriendlyTitle,checkForMulitplMasechtos }
