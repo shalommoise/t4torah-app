@@ -148,33 +148,33 @@ async function buildFullSchedule(startDateId, startShiurId, tableName) {
             shiur.dateObj = dateObj;
 
             const scheduleObj = calculateSchedule(shiur, tableName);
- 
+
             await insertIntoSchedule(scheduleObj, tableName);
-      
+
             dateId++;
-            if (tableName === "time4mishna"  && scheduleObj.shiur_id && dateObj !== "Shabbos" && dateObj.day_of_week !== "Friday" && (
+            if (tableName === "time4mishna" && scheduleObj.shiur_id && dateObj !== "Shabbos" && dateObj.day_of_week !== "Friday" && (
                 shiur.time4mishna_shiur_id === 164 || shiur.time4mishna_shiur_id === 334 || shiur.time4mishna_shiur_id === 479
                 || shiur.time4mishna_shiur_id === 651 || shiur.time4mishna_shiur_id === 799)) {
-                    try{
-           
-           while (true) {
-            let nextDay = await getDateDetails(dateId);
-            if (!nextDay) break;
-            console.log("In end of sedr loop");
-            console.log(nextDay); console.log(shiur.time4mishna_shiur_id); console.log(scheduleObj.shiur_id)
-            if (nextDay.day_of_week === "Friday") break;
-            if (nextDay.day_of_week === "Sunday") break;
-            const excemptionSchedule = {};
-            excemptionSchedule.date_id = nextDay.date_id;
-            excemptionSchedule.additional_notice = nextDay.special_date;
-            excemptionSchedule.shiur_type = "chazara";
-            excemptionSchedule.shiur_id = null;
-            await insertIntoSchedule(excemptionSchedule, tableName);
-            dateId = dateId + 1;
-           }
-           console.log("Finished a seder");
-           shiurId++;
-           }  catch (err) {console.error(err); break;}
+                try {
+
+                    while (true) {
+                        let nextDay = await getDateDetails(dateId);
+                        if (!nextDay) break;
+                        console.log("In end of sedr loop");
+                        console.log(nextDay); console.log(shiur.time4mishna_shiur_id); console.log(scheduleObj.shiur_id)
+                        if (nextDay.day_of_week === "Friday") break;
+                        if (nextDay.day_of_week === "Sunday") break;
+                        const excemptionSchedule = {};
+                        excemptionSchedule.date_id = nextDay.date_id;
+                        excemptionSchedule.additional_notice = nextDay.special_date;
+                        excemptionSchedule.shiur_type = "chazara";
+                        excemptionSchedule.shiur_id = null;
+                        await insertIntoSchedule(excemptionSchedule, tableName);
+                        dateId = dateId + 1;
+                    }
+                    console.log("Finished a seder");
+                    shiurId++;
+                } catch (err) { console.error(err); break; }
             } else {
                 shiurId = scheduleObj.shiur_id ? shiurId + 1 : shiurId;
             }

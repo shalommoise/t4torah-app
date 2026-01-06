@@ -164,7 +164,7 @@ const getMasechtaName = async (masechtaId) => {
     }
 }
 
-const getFridayAddtionalNotice = async (daily_schedule_id)=>{
+const getFridayAddtionalNotice = async (daily_schedule_id) => {
     let connection;
     try {
         connection = await getConnection();
@@ -191,25 +191,25 @@ const getFridayAddtionalNotice = async (daily_schedule_id)=>{
     }
 }
 const updatefridayAdditionalNotice = async (daily_schedule_id, newNotice) => {
-  let connection;
+    let connection;
 
-  try {
-    connection = await getConnection();
+    try {
+        connection = await getConnection();
 
-    const [result] = await connection.query(
-      `UPDATE time4mishna_daily_schedule 
+        const [result] = await connection.query(
+            `UPDATE time4mishna_daily_schedule 
        SET additional_notice = ?
        WHERE daily_schedule_id = ?`,
-      [newNotice, daily_schedule_id]
-    );
+            [newNotice, daily_schedule_id]
+        );
 
-    return result.affectedRows;   // 1 = success, 0 = not found
-  } catch (err) {
-    console.error("Error updating column:", err.message);
-    throw err;
-  } finally {
-    if (connection) connection.release();
-  }
+        return result.affectedRows;   // 1 = success, 0 = not found
+    } catch (err) {
+        console.error("Error updating column:", err.message);
+        throw err;
+    } finally {
+        if (connection) connection.release();
+    }
 };
 
 const getForAllSchedule = async () => {
@@ -222,39 +222,39 @@ const getForAllSchedule = async () => {
         while (true) {
             if (i >= allFridaysInActiveSchedule.length - 1) break;
             const fridayChazara = allFridaysInActiveSchedule[i].daily_schedule_id;
-             
+
             const toCheckIfExistisarr = [fridayChazara - 5, fridayChazara - 4, fridayChazara - 3, fridayChazara - 2, fridayChazara - 1];
             const exisitngShiurim = await checkIfShiurExists(toCheckIfExistisarr);
             const firstAndLastShiurim = [exisitngShiurim[0], exisitngShiurim[exisitngShiurim.length - 1]];
             const firstAndLastShiuIds = await getFirstAndLastShiurim(firstAndLastShiurim);
             let title = '';
-            if(firstAndLastShiuIds.length === 1) {
-              title = firstAndLastShiuIds.shiur_title
+            if (firstAndLastShiuIds.length === 1) {
+                title = firstAndLastShiuIds.shiur_title
             } else {
-            const firstMishna = firstAndLastShiuIds[0].start_mishna;
-            const lastMishna = firstAndLastShiuIds[1].end_mishna;
-            const firstAndLastMishnayos = await getFirstAndLastMishnayos([firstMishna, lastMishna]);
-            const titleArr = checkForMulitplMasechtos(firstAndLastMishnayos[0], firstAndLastMishnayos[1]);
-            
-            if (titleArr[0] === 1) {
-                const masechtaName = await getMasechtaName([titleArr[1]]);
-                title = `${masechtaName[0].masechta_name} ${titleArr[2]}-${titleArr[3]}`;
+                const firstMishna = firstAndLastShiuIds[0].start_mishna;
+                const lastMishna = firstAndLastShiuIds[1].end_mishna;
+                const firstAndLastMishnayos = await getFirstAndLastMishnayos([firstMishna, lastMishna]);
+                const titleArr = checkForMulitplMasechtos(firstAndLastMishnayos[0], firstAndLastMishnayos[1]);
 
-            } else if (titleArr[0] === 2) {
-                const firstMasechtaName = await getMasechtaName([titleArr[1]]);
-                const lastMasechtaName = await getMasechtaName([titleArr[2]]);
-                title = `${firstMasechtaName[0].masechta_name} ${titleArr[3]} - ${lastMasechtaName[0].masechta_name} ${titleArr[4]}`
+                if (titleArr[0] === 1) {
+                    const masechtaName = await getMasechtaName([titleArr[1]]);
+                    title = `${masechtaName[0].masechta_name} ${titleArr[2]}-${titleArr[3]}`;
+
+                } else if (titleArr[0] === 2) {
+                    const firstMasechtaName = await getMasechtaName([titleArr[1]]);
+                    const lastMasechtaName = await getMasechtaName([titleArr[2]]);
+                    title = `${firstMasechtaName[0].masechta_name} ${titleArr[3]} - ${lastMasechtaName[0].masechta_name} ${titleArr[4]}`
+                }
             }
-        }
-            i = i + 1; 
-            const additionalNotice =  await getFridayAddtionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id);
+            i = i + 1;
+            const additionalNotice = await getFridayAddtionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id);
             const newNotice = additionalNotice ? `${title}: ${additionalNotice}` : title;
             console.log(newNotice);
             await updatefridayAdditionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id, newNotice);
             // return title;
 
         } console.log(`Finished building chazara schedule`);
-         await pool.end();
+        await pool.end();
     } catch (err) {
         console.error(err);
     }
