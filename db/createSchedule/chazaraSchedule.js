@@ -61,7 +61,7 @@ const checkIfShiurExists = async (shiurArr) => {
         const [rows] = await connection.query(
             `SELECT *
              FROM time4mishna_daily_schedule 
-             WHERE date_id in (?) 
+             WHERE daily_schedule_id in (?) 
             AND shiur_type = 'regular'
              `,
             [shiurArr]
@@ -213,26 +213,29 @@ const updatefridayAdditionalNotice = async (daily_schedule_id, newNotice) => {
 };
 
 const getForAllSchedule = async () => {
-    const allFridays = await getFridayIds("friday");
+    const allFridays = await getFridayIds("Friday");
     const allFridaysIds = allFridays.map((items) => [items.date_id]);
     const allFridaysInActiveSchedule = await getfridayIsInSchedule(allFridaysIds);
-    if (allFridaysInActiveSchedule[0].daily_schedule_id < 5) allFridaysInActiveSchedule.shift();
     try {
         let i = 0;
         const titles = [];
         while (true) {
             if (i >= allFridaysInActiveSchedule.length - 1) break;
             const fridayChazara = allFridaysInActiveSchedule[i].daily_schedule_id;
-
+             
             const toCheckIfExistisarr = [fridayChazara - 5, fridayChazara - 4, fridayChazara - 3, fridayChazara - 2, fridayChazara - 1];
             const exisitngShiurim = await checkIfShiurExists(toCheckIfExistisarr);
             const firstAndLastShiurim = [exisitngShiurim[0], exisitngShiurim[exisitngShiurim.length - 1]];
             const firstAndLastShiuIds = await getFirstAndLastShiurim(firstAndLastShiurim);
+            let title = '';
+            if(firstAndLastShiuIds.length === 1) {
+              title = firstAndLastShiuIds.shiur_title
+            } else {
             const firstMishna = firstAndLastShiuIds[0].start_mishna;
             const lastMishna = firstAndLastShiuIds[1].end_mishna;
             const firstAndLastMishnayos = await getFirstAndLastMishnayos([firstMishna, lastMishna]);
             const titleArr = checkForMulitplMasechtos(firstAndLastMishnayos[0], firstAndLastMishnayos[1]);
-            let title = '';
+            
             if (titleArr[0] === 1) {
                 const masechtaName = await getMasechtaName([titleArr[1]]);
                 title = `${masechtaName[0].masechta_name} ${titleArr[2]}-${titleArr[3]}`;
@@ -242,6 +245,7 @@ const getForAllSchedule = async () => {
                 const lastMasechtaName = await getMasechtaName([titleArr[2]]);
                 title = `${firstMasechtaName[0].masechta_name} ${titleArr[3]} - ${lastMasechtaName[0].masechta_name} ${titleArr[4]}`
             }
+        }
             i = i + 1; 
             const additionalNotice =  await getFridayAddtionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id);
             const newNotice = additionalNotice ? `${title}: ${additionalNotice}` : title;
