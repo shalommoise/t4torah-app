@@ -120,7 +120,8 @@ const runSeed = async () => {
   await runNachSchedule();
   console.log("created time4Nach Schedule");
   await getForAllSchedule();
-  console.log("created time4mishna friday chazara schedule")
+  console.log("created time4mishna friday chazara schedule");
+  console.log("Seed complete ✅")
   // connection.release();
 }
 

@@ -214,51 +214,84 @@ const updatefridayAdditionalNotice = async (daily_schedule_id, newNotice) => {
 
 const getForAllSchedule = async () => {
     const allFridays = await getFridayIds("Friday");
-    const allFridaysIds = allFridays.map((items) => [items.date_id]);
+    if (!allFridays || allFridays.length === 0) {
+        console.log("No Fridays found. Skipping chazara schedule creation.");
+        return;
+    }
+    const allFridaysIds = allFridays.map((items) => items.date_id);
     const allFridaysInActiveSchedule = await getfridayIsInSchedule(allFridaysIds);
+
+    if (!allFridaysInActiveSchedule || allFridaysInActiveSchedule.length === 0) {
+        console.log("No active schedule found for Fridays. Skipping chazara schedule creation.");
+        return;
+    }
+
     try {
-        let i = 0;
-        const titles = [];
-        while (true) {
-            if (i >= allFridaysInActiveSchedule.length - 1) break;
-            const fridayChazara = allFridaysInActiveSchedule[i].daily_schedule_id;
+        for (let i = 0; i < allFridaysInActiveSchedule.length; i++) {
+            const currentFridaySchedule = allFridaysInActiveSchedule[i];
+            const fridayChazara = currentFridaySchedule.daily_schedule_id;
 
             const toCheckIfExistisarr = [fridayChazara - 5, fridayChazara - 4, fridayChazara - 3, fridayChazara - 2, fridayChazara - 1];
             const exisitngShiurim = await checkIfShiurExists(toCheckIfExistisarr);
+
+            if (!exisitngShiurim || exisitngShiurim.length === 0) {
+                console.warn(`No existing shiurim found for daily_schedule_id ${fridayChazara}. Skipping.`);
+                continue;
+            }
+
             const firstAndLastShiurim = [exisitngShiurim[0], exisitngShiurim[exisitngShiurim.length - 1]];
             const firstAndLastShiuIds = await getFirstAndLastShiurim(firstAndLastShiurim);
+
+            if (!firstAndLastShiuIds || firstAndLastShiuIds.length === 0) {
+                console.warn(`No first and last shiur IDs found for daily_schedule_id ${fridayChazara}. Skipping.`);
+                continue;
+            }
+
             let title = '';
             if (firstAndLastShiuIds.length === 1) {
-                title = firstAndLastShiuIds.shiur_title
+                title = firstAndLastShiuIds[0].shiur_title;
             } else {
                 const firstMishna = firstAndLastShiuIds[0].start_mishna;
                 const lastMishna = firstAndLastShiuIds[1].end_mishna;
                 const firstAndLastMishnayos = await getFirstAndLastMishnayos([firstMishna, lastMishna]);
+
+                if (!firstAndLastMishnayos || firstAndLastMishnayos.length === 0) {
+                    console.warn(`No first and last mishnayos found for shiur IDs. Skipping.`);
+                    continue;
+                }
+
                 const titleArr = checkForMulitplMasechtos(firstAndLastMishnayos[0], firstAndLastMishnayos[1]);
 
                 if (titleArr[0] === 1) {
                     const masechtaName = await getMasechtaName([titleArr[1]]);
+                    if (!masechtaName || masechtaName.length === 0) {
+                        console.warn(`Masechta name not found for ID ${titleArr[1]}. Skipping.`);
+                        continue;
+                    }
                     title = `${masechtaName[0].masechta_name} ${titleArr[2]}-${titleArr[3]}`;
 
                 } else if (titleArr[0] === 2) {
                     const firstMasechtaName = await getMasechtaName([titleArr[1]]);
                     const lastMasechtaName = await getMasechtaName([titleArr[2]]);
+
+                    if (!firstMasechtaName || firstMasechtaName.length === 0 || !lastMasechtaName || lastMasechtaName.length === 0) {
+                        console.warn(`One or both masechta names not found for IDs ${titleArr[1]}, ${titleArr[2]}. Skipping.`);
+                        continue;
+                    }
                     title = `${firstMasechtaName[0].masechta_name} ${titleArr[3]} - ${lastMasechtaName[0].masechta_name} ${titleArr[4]}`
                 }
             }
-            i = i + 1;
-            const additionalNotice = await getFridayAddtionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id);
+
+            const additionalNotice = await getFridayAddtionalNotice(currentFridaySchedule.daily_schedule_id);
             const newNotice = additionalNotice ? `${title}: ${additionalNotice}` : title;
             console.log(newNotice);
-            await updatefridayAdditionalNotice(allFridaysInActiveSchedule[i].daily_schedule_id, newNotice);
-            // return title;
-
-        } console.log(`Finished building chazara schedule`);
+            await updatefridayAdditionalNotice(currentFridaySchedule.daily_schedule_id, newNotice);
+        }
+        console.log(`Finished building chazara schedule`);
         await pool.end();
     } catch (err) {
         console.error(err);
     }
 }
 
-// getForAllSchedule()
 module.exports = {getForAllSchedule}
