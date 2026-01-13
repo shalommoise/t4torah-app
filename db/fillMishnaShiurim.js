@@ -97,9 +97,8 @@ const addShiur = async (title, startMishna, endMishna) => {
 
 const insertToShiurim = async (arr, i = 0) => {
     if (i >= arr.length - 1) {
-        console.log("✅ All shiurim added.");
-        console.log("Now run 'npm run createSchedule'");
-        await pool.end();
+        console.log("✅ All Mishna shiurim added.");
+        // await pool.end();
         return;
     }
 
@@ -110,13 +109,12 @@ const insertToShiurim = async (arr, i = 0) => {
         const firstMishnaId = await getmishnaId(firstMasechtaId, firstPerek, firstMishna);
         const lastMishnaId = await getmishnaId(lastMasechtaId, lastPerek, lastMishna);
         await addShiur(shiurTitle, firstMishnaId, lastMishnaId);
-        // console.log(`✅ Added shiur: ${shiurTitle}`);
+
     } catch (err) {
         console.error(`❌ Error adding shiur: ${shiurTitle}`, err);
-    } 
+    }
     insertToShiurim(arr, i + 1);
 };
 
 
-
-insertToShiurim(mishnayosArr, 0)
+module.exports = { insertToShiurim, mishnayosArr }

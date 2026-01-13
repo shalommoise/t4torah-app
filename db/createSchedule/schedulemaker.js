@@ -74,7 +74,7 @@ const getDateDetails = async (date_id) => {
         return rows[0];
 
     } catch (err) {
-        console.error("Error getting date detailss:", err.message);
+        console.error("Error getting date details:", err.message);
         throw err; // rethrow so the caller knows it failed
     } finally {
         if (connection) {
@@ -160,8 +160,6 @@ async function buildFullSchedule(startDateId, startShiurId, tableName) {
                     while (true) {
                         let nextDay = await getDateDetails(dateId);
                         if (!nextDay) break;
-                        console.log("In end of sedr loop");
-                        console.log(nextDay); console.log(shiur.time4mishna_shiur_id); console.log(scheduleObj.shiur_id)
                         if (nextDay.day_of_week === "Friday") break;
                         if (nextDay.day_of_week === "Sunday") break;
                         const excemptionSchedule = {};
@@ -180,6 +178,7 @@ async function buildFullSchedule(startDateId, startShiurId, tableName) {
             }
         }
         console.log(`Finished building ${tableName} schedule`);
+        // await pool.end();
     } catch (err) {
         console.error(err);
     }
@@ -188,6 +187,6 @@ async function buildFullSchedule(startDateId, startShiurId, tableName) {
 async function runSchedule(scheduleStart, startShiurId, tableName) {
     const startDateId = await getDateId(scheduleStart);
     await buildFullSchedule(startDateId, startShiurId, tableName);
-    await pool.end();
+    // await pool.end();
 }
 module.exports = { runSchedule }

@@ -6,11 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "jest --watch",
-    "seed": "node db/seed.js",
-    "fillMishnaShiurim": "node db/fillMishnaShiurim.js",
-    "createMishnaSchedule": "node db/createSchedule/mishnaSchedule.js",
-    "createNachSchedule": "node db/createSchedule/nachSchedule.js",
-    "applyChazaraSchedule": "node db/createSchedule/chazaraSchedule.js"
+    "seed": "node db/seed.js"
   },
   "repository": {
     "type": "git",

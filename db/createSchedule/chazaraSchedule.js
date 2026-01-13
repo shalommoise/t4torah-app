@@ -260,4 +260,5 @@ const getForAllSchedule = async () => {
     }
 }
 
-getForAllSchedule()
+// getForAllSchedule()
+module.exports = {getForAllSchedule}
