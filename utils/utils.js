@@ -1,32 +1,47 @@
 const parseShiurTitle = (title) => {
-    if (!title) return {};
+    if (!title) return null;
     const result = {};
     const arr = title.split(" ");
+    if (arr.length < 2) return null;
+
+    const parsePerekMishna = (value) => {
+        const parts = value.split(":");
+        if (parts.length !== 2) return null;
+        const perek = Number(parts[0]);
+        const mishna = Number(parts[1]);
+        if (Number.isNaN(perek) || Number.isNaN(mishna)) return null;
+        return { perek, mishna };
+    };
 
     if (/[a-zA-Z]/.test(arr[1])) {
         // case with two Masechtos
+        if (arr.length < 3) return null;
+        const firstSplit = arr[1].split("-");
+        if (firstSplit.length !== 2) return null;
+        const first = parsePerekMishna(firstSplit[0]);
+        const second = parsePerekMishna(arr[2]);
+        if (!first || !second) return null;
         result["firstMasechta"] = arr[0];
-        result["lastMasechta"] = arr[1].split("-")[1];
-        const first = arr[1].split("-")[0].split(":");
-        result["firstPerek"] = Number(first[0]);
-        result["firstMishna"] = Number(first[1]);
-        const second = arr[2].split(":");
-        result["lastPerek"] = Number(second[0]);
-        result["lastMishna"] = Number(second[1]);
+        result["lastMasechta"] = firstSplit[1];
+        result["firstPerek"] = first.perek;
+        result["firstMishna"] = first.mishna;
+        result["lastPerek"] = second.perek;
+        result["lastMishna"] = second.mishna;
     }
     else {
         // regular case
+        const numbers = arr[1].split("-");
+        if (numbers.length !== 2) return null;
+        const first = parsePerekMishna(numbers[0]);
+        const second = parsePerekMishna(numbers[1]);
+        if (!first || !second) return null;
         result["firstMasechta"] = arr[0];
         result["lastMasechta"] = arr[0];
-        const numbers = arr[1].split("-")
-        const first = numbers[0].split(":");
-        result["firstPerek"] = Number(first[0]);
-        result["firstMishna"] = Number(first[1]);
-        const second = numbers[1].split(":");
-        result["lastPerek"] = Number(second[0]);
-        result["lastMishna"] = Number(second[1]);
+        result["firstPerek"] = first.perek;
+        result["firstMishna"] = first.mishna;
+        result["lastPerek"] = second.perek;
+        result["lastMishna"] = second.mishna;
     }
-    // end of regular case
     return result;
 }
 
@@ -41,7 +56,10 @@ const  dbFriendlyTitle = (title) => {
 }
 
 const checkForMulitplMasechtos = (first, last)=>{
-    if(typeof(first) !== "object" || typeof(last) !== "object") {
+    const isInvalid = (value) => value == null || typeof value !== "object";
+    const hasFields = (value) =>
+        value.masechta_id != null && value.perek != null && value.mishna != null;
+    if (isInvalid(first) || isInvalid(last) || !hasFields(first) || !hasFields(last)) {
         throw new Error("Not correct format");
     } else if (first.masechta_id === last.masechta_id) {
         return [1, first.masechta_id, `${first.perek}.${first.mishna}`, `${last.perek}.${last.mishna}`]
