@@ -2,9 +2,11 @@
   "name": "time4torah-app",
   "version": "1.0.0",
   "description": "App to code all time4torah programs",
-  "main": "index.js",
+  "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
     "test": "jest --watch",
     "seed": "node db/seed.js"
   },
@@ -29,5 +31,8 @@
     "jest": "^30.0.5",
     "mysql": "^2.18.1",
     "mysql2": "^3.16.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
   }
 }
