@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "jest --watch",
+    "test": "NODE_OPTIONS=--localstorage-file=/tmp/jest-localstorage jest --watch",
     "seed": "node db/seed.js"
   },
   "repository": {
