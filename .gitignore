@@ -1,3 +1,4 @@
 logs.txt
 node_modules
 .env
+db/calendar
