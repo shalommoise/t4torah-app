@@ -1,11 +1,14 @@
 const express = require('express');
-const {getMishnabyId} = require('../controllers/mishnaController');
+const { getMishnabyId, getMishnas } = require('../controllers/mishnaController');
 const {validateNumericParam} = require("../middleware/validateParams")
 const mishnaRouter = express.Router();
 
-mishnaRouter.route("/").all((req, res) => {
-     res.status(405).json({ error: 'Method not allowed' });
-})
+mishnaRouter
+  .route("/")
+  .get(getMishnas)
+  .all((req, res) => {
+    res.status(405).json({ error: 'Method not allowed' });
+  });
 
 mishnaRouter
   .route('/:mishnaId')

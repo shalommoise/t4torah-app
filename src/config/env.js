@@ -1,5 +1,5 @@
-const port = process.env.PORT || 3000;
 require('dotenv').config();
+const port = process.env.PORT || 3000;
 const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
