@@ -164,7 +164,7 @@ async function buildFullSchedule(startDateId, startShiurId, tableName) {
                         if (nextDay.day_of_week === "Sunday") break;
                         const excemptionSchedule = {};
                         excemptionSchedule.date_id = nextDay.date_id;
-                        excemptionSchedule.additional_notice = nextDay.special_date;
+                        excemptionSchedule.additional_notice = '';
                         excemptionSchedule.shiur_type = "chazara";
                         excemptionSchedule.shiur_id = null;
                         await insertIntoSchedule(excemptionSchedule, tableName);
