@@ -1,6 +1,6 @@
 const { getConnection, pool } = require("../mysql.js");
 const { checkForMulitplMasechtos } = require("../../utils/utils.js")
-const getFridayIds = async (day) => {
+const getDayIds = async (day) => {
     let connection;
     try {
         connection = await getConnection();
@@ -12,7 +12,7 @@ const getFridayIds = async (day) => {
         );
 
         if (rows.length === 0) {
-            console.warn(`No id found for ${date}`);
+            console.warn(`No id found for ${day}`);
             return null;
         }
         return rows
@@ -27,7 +27,7 @@ const getFridayIds = async (day) => {
     }
 }
 
-const getfridayIsInSchedule = async (dateIdArr) => {
+const getDayIsInSchedule = async (dateIdArr) => {
     let connection;
     try {
         connection = await getConnection();
@@ -213,13 +213,13 @@ const updatefridayAdditionalNotice = async (daily_schedule_id, newNotice) => {
 };
 
 const getForAllSchedule = async () => {
-    const allFridays = await getFridayIds("Friday");
+    const allFridays = await getDayIds("Friday");
     if (!allFridays || allFridays.length === 0) {
         console.log("No Fridays found. Skipping chazara schedule creation.");
         return;
     }
     const allFridaysIds = allFridays.map((items) => items.date_id);
-    const allFridaysInActiveSchedule = await getfridayIsInSchedule(allFridaysIds);
+    const allFridaysInActiveSchedule = await getDayIsInSchedule(allFridaysIds);
 
     if (!allFridaysInActiveSchedule || allFridaysInActiveSchedule.length === 0) {
         console.log("No active schedule found for Fridays. Skipping chazara schedule creation.");
@@ -288,10 +288,86 @@ const getForAllSchedule = async () => {
             await updatefridayAdditionalNotice(currentFridaySchedule.daily_schedule_id, newNotice);
         }
         console.log(`Finished building chazara schedule`);
-        await pool.end();
     } catch (err) {
         console.error(err);
     }
 }
 
-module.exports = {getForAllSchedule}
+// shabbos schedule
+
+
+const getMaschtosBySeder = async (sederId) => {
+    let connection;
+    try {
+        connection = await getConnection();
+        const [rows] = await connection.query(
+            `SELECT masechta_id,number_of_perakim, masechta_name
+             FROM masechta_table 
+             WHERE seder_id=?`,
+            [sederId]
+        );
+        return rows;
+    } catch (err) {
+        console.error("Error getting shiur:", err.message);
+        throw err; // rethrow so the caller knows it failed
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+}
+
+const shabbosChazaraSchedule = async (num) => {
+    const sederMasechtos = await getMaschtosBySeder(num);
+    const masechotsIndex = [];
+    sederMasechtos.forEach((masechta) => {
+        for (let i = 1; i <= masechta.number_of_perakim; i++) {
+            masechotsIndex.push({masechta_id: masechta.masechta_id, masechta_name: masechta.masechta_name, perek: i});
+        }
+    });
+
+    const masechtosToLearn = [];
+    for (let i = 0; i < masechotsIndex.length; i+=2) {
+        const masechta = masechotsIndex[i];
+        const nextMasechta = masechotsIndex[i + 1];
+        if (nextMasechta && nextMasechta.masechta_name !== masechta.masechta_name) {
+            masechtosToLearn.push(`${masechta.masechta_name} ${masechta.perek} - ${nextMasechta.masechta_name} ${nextMasechta.perek}`);
+        } else if (nextMasechta && nextMasechta.masechta_name === masechta.masechta_name) {
+            masechtosToLearn.push(`${masechta.masechta_name} ${masechta.perek}-${nextMasechta.perek}`);
+        } else {
+            masechtosToLearn.push(`${masechta.masechta_name} ${masechta.perek}`);
+        }
+    }
+
+     return masechtosToLearn;
+    
+}
+
+
+const createShabbosSchedule = async () => {
+  const shabbosDates = await getDayIds("Shabbos");
+  const shabbosInSchedule = await getDayIsInSchedule(shabbosDates.map((item) => item.date_id));
+  const zeraimSchedule = await shabbosChazaraSchedule(1);
+  const moedSchedule = await shabbosChazaraSchedule(2);
+  const nashimSchedule = await shabbosChazaraSchedule(3);
+  const nezikinSchedule = await shabbosChazaraSchedule(4);
+  const kodshimSchedule = await shabbosChazaraSchedule(5);
+  const taharotSchedule = await shabbosChazaraSchedule(6);
+  const allShabbosSchedule = [zeraimSchedule, moedSchedule, nashimSchedule, nezikinSchedule, kodshimSchedule, taharotSchedule].flat(); 
+ try {
+     for (let i = 0; i < shabbosInSchedule.length; i++) {
+         const currentShabbosSchedule = shabbosInSchedule[i];
+         const additionalNotice = await getFridayAddtionalNotice(currentShabbosSchedule.daily_schedule_id);
+         const newNotice = `${allShabbosSchedule[i]} ${additionalNotice ? ` - ${additionalNotice}` : ''}`;
+         console.log(newNotice);
+         await updatefridayAdditionalNotice(currentShabbosSchedule.daily_schedule_id, newNotice);
+     }
+      console.log(`Finished building shabbos chazara schedule`);
+      await pool.end();
+ } catch (error) {
+    console.error("Error creating shabbos schedule:", error);
+ }
+}
+
+
+module.exports = {getForAllSchedule, createShabbosSchedule}

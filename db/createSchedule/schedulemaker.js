@@ -86,7 +86,7 @@ const getDateDetails = async (date_id) => {
 const calculateSchedule = (shiur, tableName) => {
     const scheduleObj = {};
     scheduleObj.date_id = shiur.date_id;
-    scheduleObj.additional_notice ='';
+    // scheduleObj.additional_notice = shiur.dateObj.special_date;
     // figure out what shiur it should be based on the date
     if (shiur.dateObj.is_yom_tov) {
         // skip 
@@ -106,15 +106,15 @@ const calculateSchedule = (shiur, tableName) => {
 }
 
 const insertIntoSchedule = async (scheduleObj, tableName) => {
-    const { shiur_type, shiur_id, date_id, additional_notice } = scheduleObj;
+    const { shiur_type, shiur_id, date_id } = scheduleObj;
     // console.log(shiur_id)
     let connection;
     try {
         connection = await getConnection();
         await connection.query(
-            `INSERT INTO ${tableName}_daily_schedule (shiur_type, ${tableName}_shiur_id, date_id, additional_notice)
-             VALUES (?, ?, ?,?)`,
-            [shiur_type, shiur_id, date_id, additional_notice]
+            `INSERT INTO ${tableName}_daily_schedule (shiur_type, ${tableName}_shiur_id, date_id)
+             VALUES (?, ?, ?)`,
+            [shiur_type, shiur_id, date_id]
         );
     } catch (err) {
         console.log(err)

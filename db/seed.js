@@ -99,7 +99,7 @@ const addMishnayosToTable = async (arr, query) => {
 const { insertToShiurim, mishnayosArr } = require("./fillMishnaShiurim");
 const { runMishnaSchedule } = require("./createSchedule/mishnaSchedule");
 const { runNachSchedule } = require("./createSchedule/nachSchedule");
-const {getForAllSchedule} = require("./createSchedule/chazaraSchedule")
+const {getForAllSchedule, createShabbosSchedule} = require("./createSchedule/chazaraSchedule")
 const runSeed = async () => {
   await getDates();
   console.log("Completed adding to Dates table");
@@ -121,6 +121,7 @@ const runSeed = async () => {
   console.log("created time4Nach Schedule");
   await getForAllSchedule();
   console.log("created time4mishna friday chazara schedule");
+  await createShabbosSchedule();
   console.log("Seed complete ✅")
   // connection.release();
 }
