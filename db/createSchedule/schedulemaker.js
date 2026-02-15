@@ -86,7 +86,7 @@ const getDateDetails = async (date_id) => {
 const calculateSchedule = (shiur, tableName) => {
     const scheduleObj = {};
     scheduleObj.date_id = shiur.date_id;
-    scheduleObj.additional_notice = shiur.dateObj.special_date;
+    scheduleObj.additional_notice ='';
     // figure out what shiur it should be based on the date
     if (shiur.dateObj.is_yom_tov) {
         // skip 
