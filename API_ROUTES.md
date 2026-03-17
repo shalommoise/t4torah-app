@@ -2,7 +2,42 @@
 
 Base prefix: `/api/v1`
 
+Calendar and static asset routes are served outside `/api/v1`.
+
 All routes are `GET` only.
+
+## Calendar Pages
+
+- `GET /calendar/maker`
+  - Returns the calendar generation form.
+  - Example: `curl http://localhost:3000/calendar/maker`
+
+- `GET /calendar`
+  - Generates month assets and returns the rendered HTML calendar page.
+  - Query params: `month`, `year`
+  - Example: `curl "http://localhost:3000/calendar?month=4&year=2026"`
+
+- `GET /calendar/export`
+  - Generates export files for a month calendar.
+  - Query params: `month`, `year`, `format`
+  - `format` may be `pdf`, `png`, or `all`
+  - `pdf` returns the generated PDF file
+  - `png` returns the generated PNG file
+  - `all` returns JSON with both generated file paths
+  - Examples:
+    - `curl -OJ "http://localhost:3000/calendar/export?month=4&year=2026&format=pdf"`
+    - `curl -OJ "http://localhost:3000/calendar/export?month=4&year=2026&format=png"`
+    - `curl "http://localhost:3000/calendar/export?month=4&year=2026&format=all"`
+
+## Static Assets
+
+- `GET /imgs/:filename`
+  - Serves calendar image assets from the repo root `imgs` folder.
+  - Example: `curl http://localhost:3000/imgs/wholeHeader.png --output wholeHeader.png`
+
+- `GET /calendar-files/:path`
+  - Serves files from the `calendar` folder, including generated HTML, JSON, PDF, and PNG files.
+  - Example: `curl http://localhost:3000/calendar-files/generated/calendar_04_2026.pdf --output calendar_04_2026.pdf`
 
 ## Health
 

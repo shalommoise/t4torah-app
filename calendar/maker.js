@@ -1,4 +1,5 @@
 const { generateCalendarAssets, parseMonthYear } = require('../src/services/calendarService');
+const { exportCalendarAssets } = require('../src/services/calendarExportService');
 
 const parseCliArgs = () => {
   const [, , monthArg, yearArg] = process.argv;
@@ -19,11 +20,20 @@ const generateCalendarData = async ({ monthPadded, yearNumber }) => {
   const result = await generateCalendarAssets({
     month: monthPadded,
     year: yearNumber,
-    assetBasePath: '/imgs',
+    assetBasePath: '../../imgs',
   });
 
   console.log(`Calendar JSON saved to ${result.jsonPath}`);
   console.log(`Calendar HTML saved to ${result.htmlPath}`);
+
+  const exported = await exportCalendarAssets({
+    month: monthPadded,
+    year: yearNumber,
+    htmlPath: result.htmlPath,
+  });
+
+  console.log(`Calendar PDF saved to ${exported.pdfPath}`);
+  console.log(`Calendar PNG saved to ${exported.pngPath}`);
 };
 
 const { monthPadded, yearNumber } = parseCliArgs();

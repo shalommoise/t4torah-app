@@ -321,6 +321,69 @@
       opacity: .9;
     }
 
+    @page {
+      size: A6 portrait;
+      margin: 0;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .pages {
+        padding: 0;
+        gap: 0;
+      }
+
+      .page {
+        width: 105mm;
+        min-height: 148mm;
+        max-width: none;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        break-after: page;
+      }
+
+      .calendar-wrap {
+        padding: 8mm 6mm 4mm;
+      }
+
+      .day {
+        min-height: 18mm;
+      }
+
+      .day-top .greg {
+        font-size: 12px;
+      }
+
+      .day-top .heb {
+        font-size: 9px;
+      }
+
+      .day-body .shiur-title {
+        font-size: 9px;
+      }
+
+      .day-body .chazara {
+        font-size: 9px;
+      }
+
+      .day-body .notice {
+        font-size: 8px;
+      }
+
+      .day-body .parsha {
+        font-size: 9px;
+      }
+
+      .footer {
+        padding: 4mm 6mm 6mm;
+        font-size: 9px;
+      }
+    }
+
     /* ===== Responsive ===== */
     @media (max-width: 900px) {
       .topbar {
