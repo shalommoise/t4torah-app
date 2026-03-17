@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Time4Torah – Calendar Template</title>
+
+  <style>
+    :root {
+      --ink: #111;
+      --muted: #666;
+      --grid: #2a2a2a;
+      --paper: #ffffff;
+
+      --topbar: #354d66;
+      /* blue header */
+      --topbar-accent: #f4c44a;
+      /* thin gold line */
+      --dow: #5a2a6a;
+      /* purple day-of-week strip */
+      --review: #3a8a2a;
+      /* green REVIEW */
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ink);
+      background: #f2f3f5;
+    }
+
+    .pages {
+      display: flex;
+      flex-direction: column;
+      gap: 26px;
+      padding: 24px 0 34px;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: var(--paper);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* ===== Top bar ===== */
+    .topbar {
+      background: transparent;
+      color: #fff;
+      padding: 0;
+      display: block;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .topbar::after {
+      display: none;
+    }
+
+    .header-image {
+      width: 100%;
+      display: block;
+      height: auto;
+    }
+
+    .logo {
+      display: block;
+      max-height: 46px;
+      height: auto;
+      width: auto;
+    }
+
+    .topbar-row {
+      display: none;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .project-of {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .2px;
+      opacity: .9;
+      white-space: nowrap;
+    }
+
+    .brand-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .jft-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .jft-text {
+      font-size: 10px;
+      line-height: 1.1;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      opacity: .9;
+    }
+
+    .basad {
+      position: absolute;
+      top: 10px;
+      right: 18px;
+      font-size: 14px;
+      letter-spacing: .4px;
+      opacity: .95;
+    }
+
+    .monthblock {
+      position: absolute;
+      right: 20px;
+      top: 30px;
+      text-align: right;
+      line-height: 1.05;
+      color: #fff;
+      text-transform: uppercase;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+      z-index: 2;
+      max-width: 220px;
+    }
+
+    .monthblock .month {
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: .6px;
+    }
+
+    .monthblock .hebrew {
+      margin-top: 4px;
+      font-weight: 800;
+      font-size: 14px;
+      opacity: .95;
+    }
+
+    /* ===== Calendar grid ===== */
+    .calendar-wrap {
+      padding: 18px 18px 10px;
+    }
+
+    .calendar {
+      border: 2px solid var(--grid);
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: #fff;
+    }
+
+    .dow {
+      background: var(--dow);
+      color: #fff;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 14px;
+      letter-spacing: .6px;
+      padding: 12px 10px;
+      border-right: 2px solid #3b1c46;
+      text-align: center;
+    }
+
+    .dow:last-child {
+      border-right: none;
+    }
+
+    .day {
+      min-height: 118px;
+      border-top: 2px solid var(--grid);
+      border-right: 2px solid var(--grid);
+      padding: 10px 10px 8px;
+      position: relative;
+    }
+
+    /* last column in each row */
+    .day:nth-child(7n) {
+      border-right: none;
+    }
+
+    .day.empty {
+      background: #fbfbfb;
+    }
+
+    .day.missing {
+      background: #f9f9f9;
+    }
+
+    .day.missing .heb {
+      color: #b1b1b1;
+    }
+
+    .day-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-weight: 800;
+    }
+
+    .day-top .greg {
+      font-size: 16px;
+    }
+
+    .day-top .heb {
+      font-size: 12px;
+      color: var(--muted);
+      direction: rtl;
+      white-space: nowrap;
+    }
+
+    .badges {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin: 2px 0 6px;
+    }
+
+    .badge {
+      height: 16px;
+      width: auto;
+      display: block;
+      opacity: .95;
+    }
+
+    .items {
+      margin: 0;
+      padding-left: 0;
+      list-style: none;
+      font-size: 11px;
+      line-height: 1.25;
+      color: #1f1f1f;
+    }
+
+    .items li {
+      margin: 2px 0;
+    }
+
+    .items .chazara {
+      color: var(--review);
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+
+    .items .note {
+      color: #222;
+      font-style: italic;
+      font-size: 10px;
+    }
+
+    .day-body {
+      min-height: 70px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+    }
+
+    .day-body .shiur-title {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .day-body .chazara {
+      color: var(--review);
+      font-weight: 900;
+      letter-spacing: .2px;
+      text-transform: uppercase;
+    }
+
+    .day-body .notice {
+      font-size: 11px;
+      font-style: italic;
+      color: #222;
+    }
+
+    .day-body .parsha {
+      font-size: 12px;
+      font-weight: 700;
+      direction: rtl;
+    }
+
+    /* ===== Footer ===== */
+    .footer {
+      padding: 10px 18px 18px;
+      text-align: center;
+      color: #1b1b1b;
+      font-weight: 700;
+      letter-spacing: .2px;
+      opacity: .85;
+    }
+
+    .footer small {
+      display: block;
+      font-weight: 600;
+      margin-top: 6px;
+      opacity: .9;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 900px) {
+      .topbar {
+        height: auto;
+      }
+
+      .header-image {
+        width: 100%;
+      }
+
+      .monthblock {
+        right: 12px;
+        top: 18px;
+        max-width: 200px;
+      }
+
+      .topbar-row {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+      }
+
+      .brand-center {
+        justify-content: flex-start;
+      }
+
+      .brand-right {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .monthblock {
+        text-align: left;
+      }
+
+      .calendar {
+        border-width: 1px;
+      }
+
+      .dow {
+        font-size: 12px;
+        padding: 10px 6px;
+      }
+
+      .day {
+        min-height: 110px;
+        border-width: 1px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="pages" id="pages"></div>
+
+  <template id="calendar-page-template">
+    <div class="page">
+      <!--
+        ASSETS served from /imgs:
+        - wholeHeader.png
+        - Time-4-Mishnah-black-100x38.png
+        - Time-4-Nach-black-84x41.png
+        - Time-4-Parsha-black-84x37.png
+        - Time-4-Tefilla-black-84x41.png
+      -->
+
+      <header class="topbar">
+        <img class="header-image" src="__CALENDAR_ASSET_BASE__/wholeHeader.png" alt="Time4Torah calendar header" />
+        <div class="monthblock">
+          <div class="month js-month-label">APRIL 2022</div>
+          <div class="hebrew js-hebrew-label">NISSAN 5782</div>
+        </div>
+      </header>
+
+      <div class="calendar-wrap">
+        <div class="calendar" aria-label="Monthly calendar">
+          <!-- Day-of-week header row -->
+          <div class="dow">SUNDAY</div>
+          <div class="dow">MONDAY</div>
+          <div class="dow">TUESDAY</div>
+          <div class="dow">WEDNESDAY</div>
+          <div class="dow">THURSDAY</div>
+          <div class="dow">FRIDAY</div>
+          <div class="dow">SHABBOS</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        mishnah@time4torah.org&nbsp;&nbsp;|&nbsp;&nbsp;www.time4torah.org
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const calendarData = __CALENDAR_DATA__;
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ];
+
+    const pagesEl = document.getElementById("pages");
+    const pageTemplate = document.getElementById("calendar-page-template");
+
+    const buildMonthLabel = (entries) => {
+      const months = [];
+      entries.forEach((entry) => {
+        const [year, month] = entry.gregorian_date.split("-");
+        const key = `${year}-${month}`;
+        if (!months.some((item) => item.key === key)) {
+          months.push({
+            key,
+            year: Number(year),
+            monthIndex: Number(month) - 1
+          });
+        }
+      });
+
+      if (months.length === 0) {
+        return "";
+      }
+
+      const years = new Set(months.map((item) => item.year));
+      if (years.size === 1) {
+        return `${months.map((item) => monthNames[item.monthIndex].toUpperCase()).join(" / ")} ${months[0].year}`;
+      }
+
+      return months
+        .map((item) => `${monthNames[item.monthIndex].toUpperCase()} ${item.year}`)
+        .join(" / ");
+    };
+
+    const buildHebrewMonthLabel = (entries) => {
+      const months = [];
+      const years = new Set();
+      entries.forEach((entry) => {
+        const match = entry.hebrew_date.match(/\d+\s+([A-Za-z]+)\s+(\d+)/);
+        if (!match) {
+          return;
+        }
+        const monthName = match[1];
+        const year = match[2];
+        if (!months.includes(monthName)) {
+          months.push(monthName);
+        }
+        years.add(year);
+      });
+
+      if (months.length === 0) {
+        return "";
+      }
+
+      if (years.size === 1) {
+        const [year] = Array.from(years);
+        return `${months.join(" / ").toUpperCase()} ${year}`;
+      }
+
+      return months
+        .map((monthName, index) => `${monthName} ${Array.from(years)[index] || ""}`.trim())
+        .join(" / ")
+        .toUpperCase();
+    };
+
+    const getDayOfWeek = (dateStr) => {
+      const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Shabbos"];
+      const [year, month, day] = dateStr.split("-").map(Number);
+      return names[new Date(year, month - 1, day).getDay()];
+    };
+
+    const parseGregorianDate = (dateStr) => {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    };
+
+    const formatGregorianDate = (dateObj) => {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const extractHebrewParsha = (text) => {
+      if (!text) {
+        return "";
+      }
+      const parts = text.split(" - ");
+      const hebrewPart = parts.find((part) => /[\u0590-\u05FF]/.test(part));
+      return hebrewPart ? hebrewPart.trim() : "";
+    };
+
+    const buildDayCell = (date, data) => {
+      const dayEl = document.createElement("div");
+      dayEl.className = "day";
+      dayEl.dataset.date = date;
+
+      if (!data) {
+        dayEl.classList.add("missing");
+      }
+
+      const dayTop = document.createElement("div");
+      dayTop.className = "day-top";
+      const greg = document.createElement("div");
+      greg.className = "greg";
+      greg.textContent = String(Number(date.split("-")[2]));
+      const heb = document.createElement("div");
+      heb.className = "heb";
+      heb.textContent = data ? data.hebrew_date_he : "";
+      dayTop.append(greg, heb);
+      dayEl.appendChild(dayTop);
+
+      if (data) {
+        const dayOfWeek = data.day_of_week || getDayOfWeek(date);
+        const body = document.createElement("div");
+        body.className = "day-body";
+        const reviewNotice = data.additional_notice || "";
+
+        if (["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"].includes(dayOfWeek)) {
+          if (data.shiur_type === "regular" && data.shiur_title) {
+            const title = document.createElement("div");
+            title.className = "shiur-title";
+            title.textContent = data.shiur_title;
+            body.appendChild(title);
+          } else if (reviewNotice) {
+            const label = document.createElement("div");
+            label.className = "chazara";
+            label.textContent = "CHAZARA";
+            body.appendChild(label);
+
+            const notice = document.createElement("div");
+            notice.className = "notice";
+            notice.textContent = reviewNotice;
+            body.appendChild(notice);
+          }
+          if (data.special_date && !data.special_date.includes("Parshas")) {
+            const notice = document.createElement("div");
+            notice.className = "notice";
+            notice.textContent = data.special_date;
+            body.appendChild(notice);
+          }
+        } else if (dayOfWeek === "Friday") {
+          const label = document.createElement("div");
+          label.className = "chazara";
+          label.textContent = "CHAZARA";
+          body.appendChild(label);
+          if (reviewNotice) {
+            const notice = document.createElement("div");
+            notice.className = "notice";
+            notice.textContent = reviewNotice;
+            body.appendChild(notice);
+          }
+        } else if (dayOfWeek === "Shabbos") {
+          const label = document.createElement("div");
+          label.className = "chazara";
+          label.textContent = "CHAZARA";
+          body.appendChild(label);
+          if (reviewNotice) {
+            const shabbosReview = document.createElement("div");
+            shabbosReview.className = "notice";
+            shabbosReview.textContent = reviewNotice;
+            body.appendChild(shabbosReview);
+          }
+          const parshaText = extractHebrewParsha(data.special_date || "");
+          if (parshaText) {
+            const parsha = document.createElement("div");
+            parsha.className = "parsha";
+            parsha.textContent = parshaText;
+            body.appendChild(parsha);
+          }
+        }
+
+        if (body.children.length > 0) {
+          dayEl.appendChild(body);
+        }
+      }
+
+      return dayEl;
+    };
+
+    const buildCalendar = (entries) => {
+      if (!Array.isArray(entries) || entries.length === 0) {
+        pagesEl.textContent = "No calendar data available for this month.";
+        return;
+      }
+
+      const sortedEntries = entries
+        .slice()
+        .sort((a, b) => a.gregorian_date.localeCompare(b.gregorian_date));
+      const dataByDate = new Map(
+        sortedEntries.map((entry) => [entry.gregorian_date, entry])
+      );
+
+      const page = pageTemplate.content.firstElementChild.cloneNode(true);
+      page.querySelector(".js-month-label").textContent =
+        buildMonthLabel(sortedEntries);
+      page.querySelector(".js-hebrew-label").textContent =
+        buildHebrewMonthLabel(sortedEntries);
+
+      const calendarGrid = page.querySelector(".calendar");
+      const startDate = parseGregorianDate(sortedEntries[0].gregorian_date);
+      const endDate = parseGregorianDate(sortedEntries[sortedEntries.length - 1].gregorian_date);
+
+      const firstDow = startDate.getDay();
+      for (let i = 0; i < firstDow; i += 1) {
+        const empty = document.createElement("div");
+        empty.className = "day empty";
+        empty.setAttribute("aria-hidden", "true");
+        calendarGrid.appendChild(empty);
+      }
+
+      let dayCount = 0;
+      const cursor = new Date(startDate);
+      while (cursor <= endDate) {
+        const dateStr = formatGregorianDate(cursor);
+        calendarGrid.appendChild(buildDayCell(dateStr, dataByDate.get(dateStr)));
+        cursor.setDate(cursor.getDate() + 1);
+        dayCount += 1;
+      }
+
+      const totalCells = firstDow + dayCount;
+      const trailing = (7 - (totalCells % 7)) % 7;
+      for (let i = 0; i < trailing; i += 1) {
+        const empty = document.createElement("div");
+        empty.className = "day empty";
+        empty.setAttribute("aria-hidden", "true");
+        calendarGrid.appendChild(empty);
+      }
+
+      pagesEl.appendChild(page);
+    };
+
+    buildCalendar(calendarData);
+  </script>
+</body>
+
+</html>

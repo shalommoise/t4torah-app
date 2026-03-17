@@ -5,7 +5,7 @@ const notFound = (req, res, next) => {
 const errorHandler = (err, req, res, next) => {
   // eslint-disable-next-line no-console
   console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 };
 
 module.exports = { notFound, errorHandler };

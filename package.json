@@ -26,6 +26,7 @@
   "homepage": "https://github.com/shalommoise/t4torah-app#readme",
   "dependencies": {
     "axios": "^1.7.9",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "jest": "^30.0.5",

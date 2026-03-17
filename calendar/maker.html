@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Maker</title>
+</head>
+<body>
+    <h1>
+        Calendar Maker
+    </h1>
+
+    <p>Input the month and year</p>
+
+    <form action="/calendar" method="get">
+        <label for="month">Month:</label>
+        <input type="number" id="month" name="month" min="1" max="12" required>
+        <br><br>
+        <label for="year">Year:</label>
+        <input type="number" id="year" name="year" min="2026" required>
+        <br><br>
+        <input type="submit" value="Generate Calendar">
+    </form>
+</body>
+</html>
