@@ -45,6 +45,7 @@ const getTime4MishnaShiurById = async (req, res) => {
     return res.status(404).json({ error: 'Shiur not found' });
   }
   shiur[0].shiur_link = formFileName('mishna','shiurim', shiur[0].shiur_title.split(' ').join('_'),"mp3");
+  shiur[0].shiur_text_link = formFileName('mishna','shiurim', shiur[0].shiur_title.split(' ').join('_'),"pdf");
   res.json(shiur[0]);
 };
 
