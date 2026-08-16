@@ -1,9 +1,9 @@
 const request = require('supertest');
 const app = require('../src/app');
 
-describe('GET /api/sedarim/', () => {
+describe('GET /api/v1/sedarim/', () => {
   test('returns list of sedarim', async () => {
-    const res = await request(app).get('/api/sedarim/');
+    const res = await request(app).get('/api/v1/sedarim/');
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
@@ -11,9 +11,9 @@ describe('GET /api/sedarim/', () => {
   });
 }); 
 
-describe('GET /api/masechtos/',()=>{
+describe('GET /api/v1/masechtos/',()=>{
     test('returns list of masechtaos', async () => {
-        const res = await request(app).get('/api/masechtos/');
+        const res = await request(app).get('/api/v1/masechtos/');
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
@@ -21,8 +21,8 @@ describe('GET /api/masechtos/',()=>{
 });
 
 describe('Get api/masechtos/:id',()=>{
-    test.only('returns a specific masechta by ID', async () => {
-        const res = await request(app).get('/api/masechtos/1'); // Assuming 1 is a valid ID
+    test('returns a specific masechta by ID', async () => {
+        const res = await request(app).get('/api/v1/masechtos/1'); // Assuming 1 is a valid ID
         //   console.log(res)
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('masechta_id', 1);
