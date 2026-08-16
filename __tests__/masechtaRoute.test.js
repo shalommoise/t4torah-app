@@ -20,7 +20,7 @@ describe('GET /api/v1/masechtos/',()=>{
     });
 });
 
-describe('Get api/masechtos/:id',()=>{
+describe('GET /api/v1/masechtos/:id',()=>{
     test('returns a specific masechta by ID', async () => {
         const res = await request(app).get('/api/v1/masechtos/1'); // Assuming 1 is a valid ID
         //   console.log(res)
