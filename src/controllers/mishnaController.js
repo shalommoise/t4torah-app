@@ -39,8 +39,11 @@ const getMishnas = async (req, res) => {
 };
 
 const getMishnabyId = async (req, res) => {
-    const mishnaId = req.params.mishnaId;
-const mishna = await selectMishnaById(mishnaId);
+  const mishnaId = req.params.mishnaId;
+  const mishna = await selectMishnaById(mishnaId);
+  if (!mishna.length) {
+    return res.status(404).json({ error: 'Mishna not found' });
+  }
   res.json(mishna);
 };
 

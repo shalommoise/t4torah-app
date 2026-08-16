@@ -3,7 +3,7 @@ const {parseShiurTitle} = require("../utils/utils")
 describe("parseShiurTitle()", ()=>{
     test("parseShiurTitle empty",()=>{
         const emptyStr = ''
-         expect(parseShiurTitle(emptyStr)).toEqual({});
+         expect(parseShiurTitle(emptyStr)).toBeNull();
     })
     test("parse regular shiur ", ()=>{
         const standardShiur = "Brachos 1:1-1:4";

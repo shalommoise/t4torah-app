@@ -20,13 +20,13 @@ describe('GET /api/v1/mishnas/:mishnaId', () => {
     expect(selectMishnaById).toHaveBeenCalledWith('1');
   });
 
-  test('returns empty array when id is missing', async () => {
+  test('returns 404 when id does not exist', async () => {
     selectMishnaById.mockResolvedValue([]);
 
     const res = await request(app).get(`${API_BASE}/mishnas/99999`);
 
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Mishna not found' });
   });
   test('returns empty array when id is wrong format', async () => {
     selectMishnaById.mockResolvedValue([]);
