@@ -31,7 +31,7 @@ describe('GET /calendar', () => {
     expect(generateCalendarAssets).toHaveBeenCalledWith({
       month: 4,
       year: 2026,
-      assetBasePath: '/calendar-files',
+      assetBasePath: '/imgs',
     });
   });
 
