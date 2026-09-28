@@ -9,7 +9,7 @@ Work top to bottom. Read CLAUDE.md first.
 
 - [x] **A1 Daily content service** — `src/services/dailyContentService.js`: `getDailyContent(gregorianDate)` → looks up the date row (via `selectDates` filter or a new `selectDateByGregorianDate` model fn), then `selectTime4MishnaScheduleByDateId` and `selectTime4NachScheduleByDateId`. Returns `{ date, time4mishna: [...], time4nach: [...] }`. Returns `null` when the date isn't in `dates_table`. Validate `YYYY-MM-DD`. Tests with mocked models.
 - [x] **A2 Send-day rules** — `shouldSendOn(dateRow)` in a small `src/services/sendRules.js`: no send when `day_of_week === 'Shabbos'` or `is_yom_tov` is true. Pure function, well tested (weekday, Friday, Shabbos, Yom Tov, Chol HaMoed = send).
-- [ ] **A3 Shiur label formatting** — pure helpers: Mishna range label (e.g. `Brachos 1:1–1:4`, and cross-masechta `Brachos 9:5 – Peah 1:3`) from the joined schedule row fields; Nach label (`<sefer_name> <perek>`). Reuse/align with `parseShiurTitle` in `utils/utils.js`. Handle `null` shiur (no-shiur days) and `additional_notice`.
+- [x] **A3 Shiur label formatting** — pure helpers: Mishna range label (e.g. `Brachos 1:1–1:4`, and cross-masechta `Brachos 9:5 – Peah 1:3`) from the joined schedule row fields; Nach label (`<sefer_name> <perek>`). Reuse/align with `parseShiurTitle` in `utils/utils.js`. Handle `null` shiur (no-shiur days) and `additional_notice`.
 - [ ] **A4 Sefaria links** — helper that builds a Sefaria URL for a Mishna range and a Nach perek (e.g. `https://www.sefaria.org/Mishnah_Berakhot.1.1-4`). Needs a masechta → Sefaria name map: derive from `db/data/masechtaNames.json` / `SefariaUtils/getmishnayos.js` if possible; otherwise mark `[!]` and use `alt_names`. No network calls.
 
 ## B. Rendering
