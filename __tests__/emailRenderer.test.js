@@ -74,7 +74,7 @@ describe('formatGregorianDate', () => {
 });
 
 describe('renderEmail', () => {
-  test('time4mishna email shows date, Hebrew date RTL, label and Sefaria link', () => {
+  test('time4mishna email shows date, Hebrew date RTL and label', () => {
     const { html, text } = renderEmail(content(), { program: 'time4mishna' });
 
     expect(html).toContain('<title>Time4Mishna</title>');
@@ -82,19 +82,17 @@ describe('renderEmail', () => {
     expect(html).toContain('17 Tishrei 5787');
     expect(html).toMatch(/<p dir="rtl"[^>]*>י״ז תשרי תשפ״ז<\/p>/);
     expect(html).toContain('Brachos 1:1–1:4');
-    expect(html).toContain('href="https://www.sefaria.org/Mishnah_Berakhot.1.1-4"');
     expect(html).not.toContain('Tehillim');
     expect(html).not.toMatch(/\{\{\w+\}\}/);
 
     expect(text).toContain('Time4Mishna\nMonday 28 September 2026');
-    expect(text).toContain('Brachos 1:1–1:4\nLearn on Sefaria: https://www.sefaria.org/Mishnah_Berakhot.1.1-4');
+    expect(text).toContain('TIME4MISHNA\nBrachos 1:1–1:4');
     expect(text).not.toContain('Tehillim');
   });
 
   test('time4nach email shows only the Nach section', () => {
     const { html, text } = renderEmail(content(), { program: 'time4nach' });
     expect(html).toContain('Tehillim 42');
-    expect(html).toContain('href="https://www.sefaria.org/Psalms.42"');
     expect(html).not.toContain('Brachos');
     expect(text).toContain('TIME4NACH\nTehillim 42');
   });
@@ -132,12 +130,11 @@ describe('renderEmail', () => {
     expect(text).toContain('TIME4MISHNA\nNo shiur today.');
   });
 
-  test('shows Chazara without a Sefaria link', () => {
+  test('shows Chazara for a non-regular shiur', () => {
     const { html } = renderEmail(content({ time4mishna: [mishnaRow({ shiur_type: 'chazara' })] }), {
       program: 'time4mishna',
     });
     expect(html).toContain('Chazara');
-    expect(html).not.toContain('sefaria.org');
   });
 
   test('escapes content from the database', () => {
@@ -147,6 +144,16 @@ describe('renderEmail', () => {
     );
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;x&lt;/script&gt;');
+  });
+
+  test.each(['time4mishna', 'time4nach', 'combined'])('%s email contains no links', (program) => {
+    const { html, text } = renderEmail(
+      content({ date: dateRow({ special_date: 'Chol HaMoed Sukkos' }) }),
+      { program }
+    );
+    expect(html).not.toMatch(/<a[\s>]|href=/i);
+    expect(html).not.toMatch(/https?:\/\//i);
+    expect(text).not.toMatch(/https?:\/\/|sefaria/i);
   });
 
   test('throws for an unknown program or missing content', () => {

@@ -5,7 +5,6 @@ const {
   formatNachShiurLabel,
   getAdditionalNotice,
 } = require('../shiurLabelService');
-const { buildMishnaSefariaLinks, buildNachSefariaLink } = require('../sefariaLinkService');
 
 const TEMPLATE = fs.readFileSync(
   path.join(__dirname, '..', '..', 'templates', 'dailyEmail.html'),
@@ -62,10 +61,9 @@ const formatGregorianDate = (gregorianDate) => {
   return `${weekday} ${rest}`;
 };
 
-const toShiurItems = (rows, formatLabel, buildLinks) =>
+const toShiurItems = (rows, formatLabel) =>
   (rows || []).map((row) => ({
     label: formatLabel(row),
-    links: buildLinks(row),
     notice: getAdditionalNotice(row),
   }));
 
@@ -74,16 +72,13 @@ const getSections = (content, program) => {
   if (program === 'time4mishna' || program === 'combined') {
     sections.push({
       title: PROGRAM_TITLES.time4mishna,
-      items: toShiurItems(content.time4mishna, formatMishnaShiurLabel, buildMishnaSefariaLinks),
+      items: toShiurItems(content.time4mishna, formatMishnaShiurLabel),
     });
   }
   if (program === 'time4nach' || program === 'combined') {
     sections.push({
       title: PROGRAM_TITLES.time4nach,
-      items: toShiurItems(content.time4nach, formatNachShiurLabel, (row) => {
-        const link = buildNachSefariaLink(row);
-        return link ? [link] : [];
-      }),
+      items: toShiurItems(content.time4nach, formatNachShiurLabel),
     });
   }
   return sections;
@@ -102,11 +97,6 @@ const renderSectionHtml = ({ title, items }) => {
               `<p style="margin:0 0 4px 0;font-size:18px;line-height:1.4;font-weight:bold;">${escapeHtml(item.label)}</p>`
             );
           }
-          item.links.forEach((link) => {
-            parts.push(
-              `<p style="margin:0 0 4px 0;font-size:14px;line-height:1.4;"><a href="${escapeHtml(link)}" style="color:#1a6dcc;">Learn on Sefaria</a></p>`
-            );
-          });
           if (item.notice) {
             parts.push(
               `<p style="margin:4px 0 0 0;font-size:14px;line-height:1.4;color:#8a4b00;">${escapeHtml(item.notice)}</p>`
@@ -137,7 +127,6 @@ const renderSectionText = ({ title, items }) => {
     if (item.label) {
       lines.push(item.label);
     }
-    item.links.forEach((link) => lines.push(`Learn on Sefaria: ${link}`));
     if (item.notice) {
       lines.push(item.notice);
     }
