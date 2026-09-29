@@ -27,3 +27,27 @@ Decisions / notes for the owner:
 `npm run test:ci` → 7 suites, 43 tests passing (baseline 4/17).
 
 Next up: A4 (Sefaria links — check `db/data/masechtaNames.json` / `SefariaUtils/getmishnayos.js` for a usable masechta→Sefaria name map before assuming `[!]`), then section B (rendering).
+
+## 2026-09-29 — run (Claude, local, owner-supervised)
+
+Pre-run fix (own commit, `11cd7a1`):
+
+- **`.gitignore` repair.** The setup commit (`bb0f207`) appended `outbox/` to a last line that had no trailing newline, producing `calendar/generatedoutbox/`. That un-ignored `calendar/generated/` (~82k generated calendar files locally) and never ignored `outbox/`. Split back into two lines; owner approved.
+- The first `npm run test:ci` after `npm ci` reported 4 failed suites (0 failed tests); every rerun since has passed (7 suites / 43 tests). Treated as a cold-start flake. That first result was piped through `tail`, so the `.gitignore` commit went in before the failure was noticed. Its content doesn't touch any code and the suite passes on it. From now on commits are gated on the `test:ci` exit code.
+
+Completed 3 items:
+
+- **A4 Sefaria links** (`src/services/sefariaLinkService.js`): no `[!]` needed. The masechta → Sefaria map is derived at load time from `db/data/masechtaNames.json` (the order matches the ids in `masechta_table`) joined to `db/data/mishnaIndex.json`'s `masechtaNameAlt`. `SefariaUtils/getmishnayos.js` used those exact titles to fetch from Sefaria. Nach titles come from `tanach_index.json` `alt_name`, with `1 `/`2 ` rewritten to `I `/`II ` (Sefaria's `I_Samuel`). URL formats: `Mishnah_Berakhot.1.1-4`, `Mishnah_Berakhot.1.5-2.3`, `Psalms.42`.
+- **B1 Message model** (`src/services/render/dailyMessage.js`): JSDoc `DailyMessage` typedef, plus `createDailyMessage()`, which validates the shape and throws `TypeError` so that renderer bugs fail before reaching a sender.
+- **B2 Email renderer** (`src/services/render/emailRenderer.js`, `src/templates/dailyEmail.html`): `renderEmail(content, { program })` → `{ html, text }`. Uses `{{token}}` replacement (throws on an unknown token), escapes all DB values, uses table layout with inline CSS and max-width 600px, puts the Hebrew date in `<p dir="rtl" lang="he">`, and shows `special_date` / `additional_notice` when present. A no-shiur day shows "No shiur today."; chazara shows "Chazara" with no link.
+
+Decisions / for owner review:
+
+- **Cross-masechta Sefaria links:** Sefaria refs can't span books, so a shiur like `Brachos 9:5 – Peah 1:3` yields two links (`Mishnah_Berakhot.9.5`, `Mishnah_Peah.1.1-3`). The end of the first masechta comes from `chapterIndex.json`.
+- **Subject lines are not in B2:** `renderEmail` returns only `html`/`text`. The subject is B4, and D1 will assemble the full `DailyMessage`.
+- Link text is "Learn on Sefaria"; `combined` title is "Time4Mishna & Time4Nach". Both are easy to change.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 10 suites, 89 tests passing.
+
+Next up: B3 (WhatsApp renderer, can reuse the section-building in `emailRenderer.js`; consider extracting it), B4 (subject lines), then section C.
