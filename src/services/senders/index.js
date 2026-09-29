@@ -22,6 +22,9 @@
  * @typedef {(config: object) => Sender} SenderFactory
  */
 
+const { createConsoleSender } = require('./consoleSender');
+const { createFileSender } = require('./fileSender');
+
 const CHANNELS = ['email', 'whatsapp'];
 const MODES = ['dry-run', 'live'];
 const DEFAULT_MODE = 'dry-run';
@@ -34,7 +37,13 @@ const DEFAULT_MODE = 'dry-run';
  * @type {Record<string, Record<Channel, SenderFactory[]>>}
  */
 const SENDER_REGISTRY = {
-  'dry-run': { email: [], whatsapp: [] },
+  'dry-run': {
+    email: [(config) => createConsoleSender('email', config), (config) => createFileSender('email', config)],
+    whatsapp: [
+      (config) => createConsoleSender('whatsapp', config),
+      (config) => createFileSender('whatsapp', config),
+    ],
+  },
   live: { email: [], whatsapp: [] },
 };
 

@@ -32,7 +32,7 @@ Work top to bottom. Read CLAUDE.md first.
 ## C. Sending (dry-run only)
 
 - [x] **C1 Sender interface** — `src/services/senders/index.js`: documented interface `{ name, channel: 'email'|'whatsapp', send(message) → Promise<{ ok, id?, error? }> }`, plus `getSenders(config)` factory.
-- [ ] **C2 Console + file senders** — `consoleSender` (logs a summary) and `fileSender` (writes `outbox/<date>/<channel>-<program>.{html,txt}`; `outbox/` is gitignored). These are the defaults.
+- [x] **C2 Console + file senders** — `consoleSender` (logs a summary) and `fileSender` (writes `outbox/<date>/<channel>-<program>.{html,txt}`; `outbox/` is gitignored). These are the defaults.
 - [ ] **C3 Live-mode stubs** — `emailProviderSender` and `whatsappProviderSender` stubs that throw `Not implemented: provider not chosen` and are only selectable when `SEND_MODE=live`. Tests prove dry-run is the default and live mode without a provider fails loudly.
 - [ ] **C4 Config** — `src/config/send.js` reading `SEND_MODE` (`dry-run` default), `SEND_CHANNELS` (`email,whatsapp`), `SEND_PROGRAMS`, `OUTBOX_DIR`. Add placeholders to a new `.env.example` (create it; never touch `.env`).
 
