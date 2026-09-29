@@ -210,3 +210,26 @@ Owner answered the open review questions:
 `npm run test:ci` → 18 suites, 175 tests passing.
 
 Next up unchanged: D3.
+
+## 2026-09-29 — run: D3 (Claude, local, owner-requested single item)
+
+Built on `1ea71a4` (R2–R4 from another session). The suite passed on it (175 tests) before starting.
+
+Completed 1 item:
+
+- **D3 CLI job** (`jobs/dailySend.js`, npm script `send:daily`). Usage: `npm run send:daily -- [--date=YYYY-MM-DD] [--dry-run[=true|false]] [--channel=email|whatsapp[,…]] [--force] [--help]`.
+  - `parseArgs(argv, { today })` is pure and throws `UsageError` on unknown options, bare arguments, repeated flags, bad dates/booleans/channels.
+  - `main(argv, deps)` returns the exit code and takes injectable dependencies. The defaults load dotenv, `getSendConfig`, `runDailySend` and (lazily) the DB pool. Channels, programs and outboxDir come from `getSendConfig()`; `--channel` overrides channels. It prints one line per result (stdout when ok, stderr otherwise) and always closes the pool in `finally`.
+  - **Exit codes:** `0` ok (including a skipped Shabbos/Yom Tov), `1` any failure or a date missing from `dates_table`, `2` usage/config error (bad flags, invalid `SEND_*`, an invalid date string).
+  - Default `--date` is today in Europe/London via `Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' })`, marked `TODO(D4)` to move into the shared helper.
+
+Decisions / for owner review:
+
+- **Going live needs two switches: `SEND_MODE=live` *and* `--dry-run=false`.** `SEND_MODE=live` alone still runs dry. `--dry-run=false` without `SEND_MODE=live` exits 2 instead of silently doing a dry-run. This follows CLAUDE.md rule 3 (anything that could reach a provider must be behind `SEND_MODE=live`).
+- The job was **not executed** in this run: its default dependencies load `.env` and create the MySQL pool. Tests inject fakes, and importing the job module only pulls in the pure senders module.
+- Example cron (for F1 docs): `0 5 * * * cd /path/to/t4torah-app && npm run send:daily >> logs/send.log 2>&1`. Cron should run in Europe/London time (`CRON_TZ=Europe/London` where supported).
+- No schema changes or new dependencies (`dotenv` was already a dependency).
+
+`npm run test:ci` → 19 suites, 206 tests passing.
+
+Next up: D4 (Europe/London today/tomorrow helper, tested across the late-October clock change); replace `londonToday` in `jobs/dailySend.js` with it.
