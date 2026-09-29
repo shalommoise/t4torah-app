@@ -1,21 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  formatMishnaShiurLabel,
-  formatNachShiurLabel,
-  getAdditionalNotice,
-} = require('../shiurLabelService');
+  PROGRAM_TITLES,
+  NO_SHIUR_TEXT,
+  stripLinks,
+  formatGregorianDate,
+  getSections,
+  assertRenderable,
+} = require('./dailySections');
 
 const TEMPLATE = fs.readFileSync(
   path.join(__dirname, '..', '..', 'templates', 'dailyEmail.html'),
   'utf8'
 );
-
-const PROGRAM_TITLES = {
-  time4mishna: 'Time4Mishna',
-  time4nach: 'Time4Nach',
-  combined: 'Time4Mishna & Time4Nach',
-};
 
 const escapeHtml = (value) =>
   String(value)
@@ -41,55 +38,9 @@ const renderTemplate = (template, values) =>
     return values[token];
   });
 
-/**
- * `2026-09-28` → `Monday 28 September 2026`; returns the input unchanged if
- * it isn't a YYYY-MM-DD string.
- */
-const formatGregorianDate = (gregorianDate) => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(gregorianDate || '');
-  if (!match) {
-    return gregorianDate || '';
-  }
-  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-  const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' }).format(date);
-  const rest = new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(date);
-  return `${weekday} ${rest}`;
-};
-
-const toShiurItems = (rows, formatLabel) =>
-  (rows || []).map((row) => ({
-    label: formatLabel(row),
-    notice: getAdditionalNotice(row),
-  }));
-
-const getSections = (content, program) => {
-  const sections = [];
-  if (program === 'time4mishna' || program === 'combined') {
-    sections.push({
-      title: PROGRAM_TITLES.time4mishna,
-      items: toShiurItems(content.time4mishna, formatMishnaShiurLabel),
-    });
-  }
-  if (program === 'time4nach' || program === 'combined') {
-    sections.push({
-      title: PROGRAM_TITLES.time4nach,
-      items: toShiurItems(content.time4nach, formatNachShiurLabel),
-    });
-  }
-  return sections;
-};
-
-const NO_SHIUR_TEXT = 'No shiur today.';
-
 const renderSectionHtml = ({ title, items }) => {
-  const shiurim = items.filter((item) => item.label || item.notice);
-  const body = shiurim.length
-    ? shiurim
+  const body = items.length
+    ? items
         .map((item) => {
           const parts = [];
           if (item.label) {
@@ -118,12 +69,11 @@ const renderSectionHtml = ({ title, items }) => {
 };
 
 const renderSectionText = ({ title, items }) => {
-  const shiurim = items.filter((item) => item.label || item.notice);
   const lines = [title.toUpperCase()];
-  if (!shiurim.length) {
+  if (!items.length) {
     lines.push(NO_SHIUR_TEXT);
   }
-  shiurim.forEach((item) => {
+  items.forEach((item) => {
     if (item.label) {
       lines.push(item.label);
     }
@@ -143,16 +93,12 @@ const renderSectionText = ({ title, items }) => {
  * @returns {{ html: string, text: string }}
  */
 const renderEmail = (content, { program }) => {
-  if (!PROGRAM_TITLES[program]) {
-    throw new Error(`Unknown program: ${program}`);
-  }
-  if (!content || !content.date) {
-    throw new Error('renderEmail requires daily content with a date row');
-  }
+  assertRenderable(content, program);
 
   const dateRow = content.date;
   const title = PROGRAM_TITLES[program];
   const gregorianDate = formatGregorianDate(dateRow.gregorian_date);
+  const specialDate = stripLinks(dateRow.special_date);
   const sections = getSections(content, program);
 
   const html = renderTemplate(TEMPLATE, {
@@ -160,13 +106,13 @@ const renderEmail = (content, { program }) => {
     gregorianDate: escapeHtml(gregorianDate),
     hebrewDate: escapeHtml(dateRow.hebrew_date || ''),
     hebrewDateHe: escapeHtml(dateRow.hebrew_date_he || ''),
-    specialDate: dateRow.special_date
-      ? `<p style="margin:8px 0 0 0;font-size:15px;line-height:1.5;font-weight:bold;color:#8a4b00;">${escapeHtml(dateRow.special_date)}</p>`
+    specialDate: specialDate
+      ? `<p style="margin:8px 0 0 0;font-size:15px;line-height:1.5;font-weight:bold;color:#8a4b00;">${escapeHtml(specialDate)}</p>`
       : '',
     sections: sections.map(renderSectionHtml).join('\n'),
   });
 
-  const headerLines = [title, gregorianDate, dateRow.hebrew_date, dateRow.hebrew_date_he, dateRow.special_date]
+  const headerLines = [title, gregorianDate, dateRow.hebrew_date, dateRow.hebrew_date_he, specialDate]
     .filter(Boolean);
   const text = [headerLines.join('\n'), ...sections.map(renderSectionText)].join('\n\n') + '\n';
 

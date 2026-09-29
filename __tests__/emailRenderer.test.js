@@ -148,12 +148,17 @@ describe('renderEmail', () => {
 
   test.each(['time4mishna', 'time4nach', 'combined'])('%s email contains no links', (program) => {
     const { html, text } = renderEmail(
-      content({ date: dateRow({ special_date: 'Chol HaMoed Sukkos' }) }),
+      content({
+        date: dateRow({ special_date: 'Siyum — see https://example.com/siyum' }),
+        time4mishna: [mishnaRow({ additional_notice: 'Details at www.example.com today' })],
+        time4nach: [nachRow({ additional_notice: 'http://example.org' })],
+      }),
       { program }
     );
     expect(html).not.toMatch(/<a[\s>]|href=/i);
     expect(html).not.toMatch(/https?:\/\//i);
-    expect(text).not.toMatch(/https?:\/\/|sefaria/i);
+    expect(text).not.toMatch(/https?:\/\/|www\.|sefaria/i);
+    expect(html).not.toMatch(/www\./i);
   });
 
   test('throws for an unknown program or missing content', () => {
