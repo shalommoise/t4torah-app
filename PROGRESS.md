@@ -84,3 +84,20 @@ Decisions / for owner review:
 `npm run test:ci` → 12 suites, 99 tests passing.
 
 Next up: C1 (sender interface), C2 (console + file senders), C3 (live-mode stubs).
+
+## 2026-09-29 — run: C1 (Claude, local, owner-requested single item)
+
+Owner asked for "the next thing", so this run did one item.
+
+- **C1 Sender interface** (`src/services/senders/index.js`): JSDoc `Sender` / `SendResult` / `SenderFactory` typedefs; `assertSender()` checks for a non-empty `name`, a known `channel` and a `send()` function; `getSenders(config, registry = SENDER_REGISTRY)` returns the sender instances for `config.mode` (default `dry-run`) and `config.channels` (default all).
+
+Decisions / for owner review:
+
+- **Registry, not hard-wired senders.** `SENDER_REGISTRY` maps mode → channel → factory list. It is empty for now, so `getSenders()` returns `[]` until C2 registers the console/file senders under `dry-run` and C3 registers the stubs under `live`. Tests use their own registry.
+- **Live is opt-in and strict.** Only `mode === 'live'` selects live senders. Any other value (`'LIVE'`, `''`) throws rather than silently falling back, so a typo in `SEND_MODE` fails loudly. An unknown channel also throws.
+- The senders module doesn't import `src/config/env.js`, because that file opens the MySQL pool as soon as it's loaded.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 13 suites, 110 tests passing.
+
+Next up: C2 (console + file senders; register them in `SENDER_REGISTRY['dry-run']`), C3, C4.
