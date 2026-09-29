@@ -138,3 +138,21 @@ Decisions / for owner review:
 `npm run test:ci` → 15 suites, 126 tests passing.
 
 Next up: C4 (config: `src/config/send.js` + `.env.example`).
+
+## 2026-09-29 — run: C4 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **C4 Config** (`src/config/send.js`): `getSendConfig(env = process.env)` → `{ mode, channels, programs, outboxDir }`, which passes straight into `getSenders()`. Unset or blank variables use the defaults. Lists are trimmed and de-duplicated. An invalid value throws with the allowed values: `SEND_MODE=Live`, an unknown channel/program, or an empty list such as `SEND_CHANNELS=,`.
+- **`.env.example`** (new): placeholders for the `SEND_*` / `OUTBOX_DIR` variables, plus every variable the existing code reads (`PORT`, `DATABASE_*`, seeding/schedule vars, `BUCKET_PATH`, `CHROME_BIN`, `CALENDAR_EXPORT_HOST`). Names and defaults were taken from `process.env.*` usages in the code; `.env` was not opened.
+
+Decisions / for owner review:
+
+- **`SEND_PROGRAMS` defaults to `time4mishna,time4nach`** (two separate messages per channel). The backlog gave no default. Set `SEND_PROGRAMS=combined` for a single joint message.
+- **Mode values are case-sensitive and strict**: only `dry-run` or `live`. Anything else throws rather than falling back to dry-run, so a misspelt live setting can't go unnoticed.
+- `send.js` doesn't load dotenv or `src/config/env.js`, which opens the MySQL pool as soon as it's loaded. D3 (CLI job) should call `require('dotenv').config()` itself and then `getSendConfig()`.
+- No schema changes or new dependencies.
+
+`npm run test:ci` → 16 suites, 138 tests passing.
+
+Next up: D1 (dispatch service). It must treat a rejected `send()` (the C3 stubs) as a per-channel failure, as well as `ok: false`.
