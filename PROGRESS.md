@@ -101,3 +101,23 @@ Decisions / for owner review:
 `npm run test:ci` → 13 suites, 110 tests passing.
 
 Next up: C2 (console + file senders; register them in `SENDER_REGISTRY['dry-run']`), C3, C4.
+
+## 2026-09-29 — run: C2 (Claude, local, owner-requested single item)
+
+**Owner package update (`1d65a45`).** Jest moved to devDependencies (^30.5.2) and mysql2 went to ^3.24.4. `npm ci` and `npm run test:ci` pass on it. The same commit also accidentally committed a stale BACKLOG.md, which dropped the "R. Revisions" section and un-ticked R1/B3/B4/C1. The owner confirmed it was an accident, so `2faa690` restores BACKLOG.md from `94be356`; that diff is the exact inverse of `1d65a45`'s BACKLOG change.
+
+Completed 1 item:
+
+- **C2 Console + file senders** (`src/services/senders/consoleSender.js`, `fileSender.js`), registered as the `dry-run` defaults in `SENDER_REGISTRY`, so `getSenders()` now returns console + file senders for both channels.
+  - `consoleSender` logs one line, e.g. `[dry-run] email time4mishna 2026-09-28: "<subject>" (N chars text, M chars html)`. Its logger can be swapped via `config.logger`.
+  - `fileSender` writes `<outboxDir>/<date>/<channel>-<program>.{html,txt}`. Email writes `.html` plus a `.txt` with a `Subject:` line on top; WhatsApp writes `.txt` only. `outboxDir` defaults to `./outbox` (gitignored), and re-runs overwrite. The message goes through `createDailyMessage()` first, so a bad `date`/`program` can't produce a path outside the outbox.
+  - Both return `{ ok: false, error }` instead of throwing, which D1 needs so that one failing sender doesn't stop the others.
+
+Notes:
+
+- While writing the tests, one test briefly wrote `outbox/2026-09-28/whatsapp-time4mishna.txt` into the repo, because `path.resolve` doesn't use a mocked `process.cwd()`. That file was removed, and `fileSender` now resolves against `process.cwd()` explicitly. Tests write only to `os.tmpdir()`.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 14 suites, 119 tests passing.
+
+Next up: C3 (live-mode stubs → `SENDER_REGISTRY.live`), C4 (config + `.env.example`).
