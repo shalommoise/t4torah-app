@@ -10,6 +10,29 @@ const {
 const WHATSAPP_MAX_LENGTH = 1000;
 const ELLIPSIS = '…';
 
+// WhatsApp formatting markers: *bold*, _italic_, ~strike~, `mono` / ```block```.
+// WhatsApp has no escape syntax, so these are removed from DB text.
+const WHATSAPP_FORMATTING_PATTERN = /[*_~`]/g;
+
+/**
+ * Removes WhatsApp formatting characters from DB-sourced text so it can't
+ * break the message's own formatting. Collapses the spaces left behind and
+ * returns `null` when nothing is left.
+ *
+ * @param {string|null|undefined} value
+ * @returns {string|null}
+ */
+const stripWhatsappFormatting = (value) => {
+  if (!value) {
+    return null;
+  }
+  const stripped = String(value)
+    .replace(WHATSAPP_FORMATTING_PATTERN, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+  return stripped || null;
+};
+
 /**
  * Cuts `text` to at most `maxLength` characters (Unicode code points, so
  * Hebrew and emoji aren't split), ending with an ellipsis when cut.
@@ -32,11 +55,13 @@ const renderSection = ({ title, items }, showTitle) => {
     lines.push(NO_SHIUR_TEXT);
   }
   items.forEach((item) => {
-    if (item.label) {
-      lines.push(`*${item.label}*`);
+    const label = stripWhatsappFormatting(item.label);
+    const notice = stripWhatsappFormatting(item.notice);
+    if (label) {
+      lines.push(`*${label}*`);
     }
-    if (item.notice) {
-      lines.push(`_${item.notice}_`);
+    if (notice) {
+      lines.push(`_${notice}_`);
     }
   });
   return lines.join('\n');
@@ -45,7 +70,8 @@ const renderSection = ({ title, items }, showTitle) => {
 /**
  * Renders the daily WhatsApp message from `getDailyContent` output: `*bold*`
  * title and shiurim, `_italic_` special date and notices, blank lines between
- * sections, no links. Always under WHATSAPP_MAX_LENGTH characters; longer
+ * sections, no links. Formatting characters (`*_~` and backticks) are
+ * stripped from DB text first, since WhatsApp can't escape them. Always under WHATSAPP_MAX_LENGTH characters; longer
  * output is truncated with an ellipsis.
  *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
@@ -56,12 +82,12 @@ const renderWhatsapp = (content, { program }) => {
   assertRenderable(content, program);
 
   const dateRow = content.date;
-  const specialDate = stripLinks(dateRow.special_date);
+  const specialDate = stripWhatsappFormatting(stripLinks(dateRow.special_date));
   const header = [
     `*${PROGRAM_TITLES[program]}*`,
     formatGregorianDate(dateRow.gregorian_date),
-    dateRow.hebrew_date,
-    dateRow.hebrew_date_he,
+    stripWhatsappFormatting(dateRow.hebrew_date),
+    stripWhatsappFormatting(dateRow.hebrew_date_he),
     specialDate && `_${specialDate}_`,
   ].filter(Boolean);
 
@@ -75,4 +101,4 @@ const renderWhatsapp = (content, { program }) => {
   return { text: truncate(text, WHATSAPP_MAX_LENGTH - 1) };
 };
 
-module.exports = { renderWhatsapp, truncate, WHATSAPP_MAX_LENGTH };
+module.exports = { renderWhatsapp, truncate, stripWhatsappFormatting, WHATSAPP_MAX_LENGTH };

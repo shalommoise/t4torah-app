@@ -2,6 +2,7 @@ const {
   renderWhatsapp,
   truncate,
   WHATSAPP_MAX_LENGTH,
+  stripWhatsappFormatting,
 } = require('../src/services/render/whatsappRenderer');
 
 const dateRow = (overrides) => ({
@@ -121,6 +122,39 @@ describe('renderWhatsapp', () => {
   test('throws for an unknown program or missing content', () => {
     expect(() => renderWhatsapp(content(), { program: 'other' })).toThrow('Unknown program');
     expect(() => renderWhatsapp(null, { program: 'time4mishna' })).toThrow();
+  });
+});
+
+describe('WhatsApp formatting characters in DB text', () => {
+  test('are stripped from special date, notices and Hebrew dates', () => {
+    const { text } = renderWhatsapp(
+      content({
+        date: dateRow({ special_date: '*Chol* _HaMoed_ ~Sukkos~', hebrew_date: '17 Tishrei_ 5787' }),
+        time4mishna: [mishnaRow({ additional_notice: 'Use `code` and ```blocks``` *carefully*' })],
+      }),
+      { program: 'time4mishna' }
+    );
+    expect(text).toContain('_Chol HaMoed Sukkos_');
+    expect(text).toContain('17 Tishrei 5787');
+    expect(text).toContain('_Use code and blocks carefully_');
+    expect(text).not.toMatch(/~|`/);
+  });
+
+  test('a notice made only of formatting characters is dropped', () => {
+    const { text } = renderWhatsapp(
+      content({ time4mishna: [mishnaRow({ additional_notice: '*** ___' })] }),
+      { program: 'time4mishna' }
+    );
+    expect(text).not.toMatch(/\*\*|__/);
+  });
+});
+
+describe('stripWhatsappFormatting', () => {
+  test('removes * _ ~ and backticks and tidies spaces', () => {
+    expect(stripWhatsappFormatting('a *b* _c_ ~d~ `e`')).toBe('a b c d e');
+    expect(stripWhatsappFormatting('  *  ')).toBeNull();
+    expect(stripWhatsappFormatting(null)).toBeNull();
+    expect(stripWhatsappFormatting('ברכות א:א')).toBe('ברכות א:א');
   });
 });
 

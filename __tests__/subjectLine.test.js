@@ -8,7 +8,7 @@ const dateRow = (overrides) => ({
 
 describe('buildSubject', () => {
   test('uses the documented format', () => {
-    expect(SUBJECT_FORMAT).toBe('{program} – {weekday} {day} {month} | {hebrewDate}');
+    expect(SUBJECT_FORMAT).toBe('{program} – {weekday} {day} {month} | {hebrewDate} | {specialDate}');
   });
 
   test.each([
@@ -32,6 +32,30 @@ describe('buildSubject', () => {
 
   test('drops the Hebrew date part when there is none', () => {
     expect(buildSubject(dateRow({ hebrew_date: null }), 'time4mishna')).toBe('Time4Mishna – Thursday 8 Oct');
+  });
+
+  test('appends the special date when present', () => {
+    expect(
+      buildSubject(
+        dateRow({ gregorian_date: '2026-09-28', hebrew_date: '17 Tishrei 5787', special_date: 'Chol HaMoed Sukkos' }),
+        'time4mishna'
+      )
+    ).toBe('Time4Mishna – Monday 28 Sep | 17 Tishrei | Chol HaMoed Sukkos');
+  });
+
+  test('keeps the special date when there is no Hebrew date', () => {
+    expect(buildSubject(dateRow({ hebrew_date: null, special_date: 'Rosh Chodesh' }), 'time4nach')).toBe(
+      'Time4Nach – Thursday 8 Oct | Rosh Chodesh'
+    );
+  });
+
+  test('removes links from the special date and drops it if nothing is left', () => {
+    expect(buildSubject(dateRow({ special_date: 'Hoshana Rabbah https://x.com' }), 'time4nach')).toBe(
+      'Time4Nach – Thursday 8 Oct | 26 Tishrei | Hoshana Rabbah'
+    );
+    expect(buildSubject(dateRow({ special_date: 'https://x.com' }), 'time4nach')).toBe(
+      'Time4Nach – Thursday 8 Oct | 26 Tishrei'
+    );
   });
 
   test('throws for an unknown program or a bad date row', () => {

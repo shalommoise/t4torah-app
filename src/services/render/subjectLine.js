@@ -1,4 +1,4 @@
-const { PROGRAM_TITLES } = require('./dailySections');
+const { PROGRAM_TITLES, stripLinks } = require('./dailySections');
 
 /**
  * The subject format, in one place. Tokens:
@@ -6,11 +6,12 @@ const { PROGRAM_TITLES } = require('./dailySections');
  *   {weekday}    Monday
  *   {day}        28
  *   {month}      Sep
- *   {hebrewDate} 26 Tishrei   (dates_table.hebrew_date without the year)
- * The ` | {hebrewDate}` part is dropped when there is no Hebrew date.
+ *   {hebrewDate}  26 Tishrei   (dates_table.hebrew_date without the year)
+ *   {specialDate} Chol HaMoed Sukkos (dates_table.special_date, links removed)
+ * Each ` | {token}` part is dropped when that value is empty.
  */
-const SUBJECT_FORMAT = '{program} – {weekday} {day} {month} | {hebrewDate}';
-const HEBREW_DATE_SUFFIX = ' | {hebrewDate}';
+const SUBJECT_FORMAT = '{program} – {weekday} {day} {month} | {hebrewDate} | {specialDate}';
+const OPTIONAL_TOKENS = ['hebrewDate', 'specialDate'];
 
 // Fixed names rather than Intl, whose short month varies by ICU version
 // (e.g. en-GB "Sept").
@@ -32,9 +33,10 @@ const stripHebrewYear = (hebrewDate) => {
 
 /**
  * Builds the email subject for a day's message, e.g.
- * `Time4Mishna – Monday 28 Sep | 26 Tishrei`.
+ * `Time4Mishna – Monday 28 Sep | 26 Tishrei`, or with a special date
+ * `Time4Mishna – Monday 28 Sep | 17 Tishrei | Chol HaMoed Sukkos`.
  *
- * @param {object} dateRow A dates_table row (`gregorian_date`, `hebrew_date`).
+ * @param {object} dateRow A dates_table row (`gregorian_date`, `hebrew_date`, `special_date`).
  * @param {'time4mishna'|'time4nach'|'combined'} program
  * @returns {string}
  */
@@ -48,14 +50,19 @@ const buildSubject = (dateRow, program) => {
   }
   const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
   const hebrewDate = stripHebrewYear(dateRow.hebrew_date);
+  const specialDate = stripLinks(dateRow.special_date);
 
-  const format = hebrewDate ? SUBJECT_FORMAT : SUBJECT_FORMAT.replace(HEBREW_DATE_SUFFIX, '');
+  const format = OPTIONAL_TOKENS.reduce(
+    (fmt, token) => ({ hebrewDate, specialDate }[token] ? fmt : fmt.replace(` | {${token}}`, '')),
+    SUBJECT_FORMAT
+  );
   const values = {
     program: PROGRAM_TITLES[program],
     weekday: WEEKDAYS[date.getUTCDay()],
     day: String(date.getUTCDate()),
     month: MONTHS[date.getUTCMonth()],
     hebrewDate,
+    specialDate,
   };
   return format.replace(/\{(\w+)\}/g, (_match, token) => values[token]);
 };

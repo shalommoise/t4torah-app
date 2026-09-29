@@ -198,3 +198,15 @@ Decisions / for owner review:
 `npm run test:ci` → 18 suites, 169 tests passing.
 
 Next up: D3 (CLI job `jobs/dailySend.js` + `send:daily`). It should load dotenv, use `getSendConfig()`, map `--dry-run=false` to `dryRun: false`, pass `--force`, and close the DB pool on exit.
+
+## 2026-09-29 20:30 — R2–R4 owner decisions (Claude, interactive)
+
+Owner answered the open review questions:
+
+- **R2 Special date in subject** (`subjectLine.js`): `SUBJECT_FORMAT` is now `{program} – {weekday} {day} {month} | {hebrewDate} | {specialDate}`. Each `| {token}` part is dropped when empty. `special_date` goes through `stripLinks`, so a special date that is only a URL disappears. 4 new tests.
+- **R3 WhatsApp formatting characters** (`whatsappRenderer.js`): new `stripWhatsappFormatting()` removes `*`, `_`, `~` and backticks from all DB text (special date, Hebrew dates, shiur labels, notices) before the renderer adds its own `*bold*` / `_italic_`. Collapses leftover spaces; text that becomes empty is dropped. Email is unaffected. 3 new tests.
+- **R4 URLs in notices**: keep the current silent stripping. No change.
+
+`npm run test:ci` → 18 suites, 175 tests passing.
+
+Next up unchanged: D3.

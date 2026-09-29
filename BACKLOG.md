@@ -20,6 +20,9 @@ Work top to bottom. Read CLAUDE.md first.
   text), and any link field from the `DailyMessage` model. Leave the existing
   `SefariaUtils/` folder alone (it's pre-branch code). Update tests; `npm run test:ci` must pass.
   Note the reversal of A4 in PROGRESS.md.
+- [x] **R2 Special date in subject line** — owner decision (2026-09-29): append `| <special_date>` to the subject when present (links stripped), e.g. `Time4Mishna – Monday 28 Sep | 17 Tishrei | Chol HaMoed Sukkos`.
+- [x] **R3 Strip WhatsApp formatting characters** — owner decision (2026-09-29): remove `*`, `_`, `~` and backticks from DB text in the WhatsApp renderer so it can't break message formatting.
+- [x] **R4 URLs in notices** — owner decision (2026-09-29): keep silently stripping URLs from `special_date` / `additional_notice` for now. No code change.
 
 ## B. Rendering
 
