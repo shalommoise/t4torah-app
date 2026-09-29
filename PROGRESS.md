@@ -156,3 +156,23 @@ Decisions / for owner review:
 `npm run test:ci` → 16 suites, 138 tests passing.
 
 Next up: D1 (dispatch service). It must treat a rejected `send()` (the C3 stubs) as a per-channel failure, as well as `ok: false`.
+
+## 2026-09-29 — run: D1 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **D1 Dispatch service** (`src/services/dailySendService.js`): `runDailySend({ date, dryRun = true, channels, programs, outboxDir, logger })`. It fetches content (`getDailyContent`), applies the send-day rules (`shouldSendOn`), renders each program once into a validated `DailyMessage` (B4 subject, B2 email, B3 WhatsApp), then sends it through every sender from `getSenders`. It returns a report: `{ date, mode, status, ok, reason?, results: [{ program, channel, sender, ok, id? | error? }] }`.
+  - **Isolation:** a sender that rejects (e.g. the C3 stubs), returns `ok: false` or returns nothing becomes a failed entry for that sender only. A render failure fails that program only (`sender: null`, `error: "Render failed: …"`). The other programs and senders still run.
+  - **Status:** `sent` (everything ok), `partial`, `failed` (nothing ok, including when there are no senders), `skipped` (Shabbos/Yom Tov; `ok: true`, no senders built), `no-date` (date missing from `dates_table`; `ok: false`). An invalid date string still throws (status 400) from `getDailyContent`.
+  - Tests mock the content service and `getSenders`. Two tests use the real dry-run senders with an `os.tmpdir()` outbox (6 files written, 4 console lines), and live mode, where all 4 sends fail with the stub error and nothing is written.
+
+Decisions / for owner review:
+
+- **Live only when `dryRun === false`.** `undefined`, `'false'`, `0`, `null` all stay dry-run. D3's `--dry-run` flag must turn into a real boolean `false` to go live.
+- **A missing date is a failure** (`ok: false`) so the cron job exits non-zero when `dates_table` hasn't been seeded far enough ahead. A skipped Shabbos/Yom Tov is success.
+- `programs` defaults to the C4 default (`time4mishna,time4nach`). D3 should pass `getSendConfig().programs` / `.channels` / `.outboxDir`.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 17 suites, 156 tests passing.
+
+Next up: D2 (send log + idempotency). Adds a `send_log` table to `db/setup.sql` (schema addition only; not run) and a `force` option to `runDailySend`.
