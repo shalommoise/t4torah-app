@@ -51,3 +51,14 @@ Decisions / for owner review:
 `npm run test:ci` → 10 suites, 89 tests passing.
 
 Next up: B3 (WhatsApp renderer, can reuse the section-building in `emailRenderer.js`; consider extracting it), B4 (subject lines), then section C.
+
+## 2026-09-29 — R1 (Claude, local, owner-requested)
+
+- **R1 Remove Sefaria links — reverses A4.** The owner decided that daily messages contain no external links. Deleted `src/services/sefariaLinkService.js` and `__tests__/sefariaLinkService.test.js`, and removed the "Learn on Sefaria" output (HTML and text) from `emailRenderer.js`. `dailyEmail.html` and the `DailyMessage` model had no link fields, so they are unchanged. `SefariaUtils/` is untouched. A4 stays `[x]` in BACKLOG.md as history; R1 (new section "R. Revisions") records the reversal.
+- Added a test asserting that no program's email (HTML or text) contains `<a`, `href=` or an `http(s)://` URL.
+
+For owner review:
+
+- **B3 still says "links on their own line"** (WhatsApp renderer). That conflicts with the no-links decision. I left the backlog text unchanged. Please reword it, or a future run should treat the no-links decision as overriding it.
+
+`npm run test:ci` → 9 suites, 73 tests passing.
