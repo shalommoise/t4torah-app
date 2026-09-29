@@ -24,6 +24,7 @@
 
 const { createConsoleSender } = require('./consoleSender');
 const { createFileSender } = require('./fileSender');
+const { createEmailProviderSender, createWhatsappProviderSender } = require('./providerSenders');
 
 const CHANNELS = ['email', 'whatsapp'];
 const MODES = ['dry-run', 'live'];
@@ -44,7 +45,10 @@ const SENDER_REGISTRY = {
       (config) => createFileSender('whatsapp', config),
     ],
   },
-  live: { email: [], whatsapp: [] },
+  live: {
+    email: [createEmailProviderSender],
+    whatsapp: [createWhatsappProviderSender],
+  },
 };
 
 /**
