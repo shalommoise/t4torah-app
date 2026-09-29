@@ -27,7 +27,7 @@ Work top to bottom. Read CLAUDE.md first.
 - [x] **B2 Email renderer** — `src/services/render/emailRenderer.js`: HTML + plain-text email from daily content. Template in `src/templates/dailyEmail.html` with simple `{{token}}` replacement (no templating dependency). Inline CSS, mobile-friendly, Hebrew date shown RTL (`dir="rtl"` on that element), special_date / additional_notice shown when present. Snapshot or string-contains tests.
 - [x] **R1 Remove Sefaria links** — *(duplicate of R1 above; done in `02c76ac`, verified 2026-09-29)* — owner decision: daily messages contain no external links. Delete `src/services/sefariaLinkService.js` and its tests. Remove all link output from `emailRenderer.js` and `src/templates/dailyEmail.html` (including the "Learn on Sefaria" text), and any link field from the `DailyMessage` model. Leave the existing `SefariaUtils/` folder alone (pre-branch code). Update tests; `npm run test:ci` must pass. Note the reversal of A4 in PROGRESS.md.
 - [x] **B3 WhatsApp renderer** — `src/services/render/whatsappRenderer.js`: WhatsApp-formatted text (`*bold*`, line breaks, no links). Keep under 1,000 characters; test the limit.
-- [ ] **B4 Subject lines** — deterministic subject format, e.g. `Time4Mishna – Monday 28 Sep | 26 Tishrei`. Put the format in one place so it's easy to change.
+- [x] **B4 Subject lines** — deterministic subject format, e.g. `Time4Mishna – Monday 28 Sep | 26 Tishrei`. Put the format in one place so it's easy to change.
 
 ## C. Sending (dry-run only)
 
