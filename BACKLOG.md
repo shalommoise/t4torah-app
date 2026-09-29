@@ -38,7 +38,7 @@ Work top to bottom. Read CLAUDE.md first.
 
 ## D. Orchestration
 
-- [ ] **D1 Dispatch service** — `src/services/dailySendService.js`: `runDailySend({ date, dryRun, channels })` → content → send-day rules → render → send via each sender → returns a result report (per channel/program: ok/error). One sender failing must not stop the others. Tests with mocked content + senders.
+- [x] **D1 Dispatch service** — `src/services/dailySendService.js`: `runDailySend({ date, dryRun, channels })` → content → send-day rules → render → send via each sender → returns a result report (per channel/program: ok/error). One sender failing must not stop the others. Tests with mocked content + senders.
 - [ ] **D2 Idempotency / send log** — add a `send_log` table to `db/setup.sql` (date, program, channel, status, provider_message_id, created_at) and a model (`insertSendLog`, `selectSendLog(date, program, channel)`). Dispatch skips a channel/program already logged `sent` for that date unless `force`. Tests mock the model. Note the schema addition in PROGRESS.md.
 - [ ] **D3 CLI job** — `jobs/dailySend.js` + npm script `send:daily`: flags `--date=YYYY-MM-DD` (default: today in Europe/London), `--dry-run` (default true), `--channel=email|whatsapp`, `--force`. Exit code non-zero on any failure. Closes the DB pool on exit. Test the argument parsing as a pure function.
 - [ ] **D4 Send-time helper** — Europe/London "today"/"tomorrow" date helper (handles BST/GMT without a new dependency, via `Intl.DateTimeFormat`). Tested across the late-October clock change.
