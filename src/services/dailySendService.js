@@ -6,6 +6,7 @@ const { createDailyMessage } = require('./render/dailyMessage');
 const { renderEmail } = require('./render/emailRenderer');
 const { renderWhatsapp } = require('./render/whatsappRenderer');
 const { buildSubject } = require('./render/subjectLine');
+const { insertSendLog, selectSendLog } = require('../models/sendLogModel');
 
 /**
  * @typedef {object} SendReportEntry
@@ -15,6 +16,8 @@ const { buildSubject } = require('./render/subjectLine');
  * @property {boolean} ok
  * @property {string} [id]
  * @property {string} [error]
+ * @property {boolean} [skipped] Already logged `sent` for this date; not sent again.
+ * @property {string} [logError] Sent, but recording it in send_log failed.
  */
 
 /**
@@ -26,6 +29,8 @@ const { buildSubject } = require('./render/subjectLine');
  * @property {string} [reason] Why nothing was sent (`skipped` / `no-date`).
  * @property {SendReportEntry[]} results One entry per program × sender.
  */
+
+const PROVIDER_ID_MAX_LENGTH = 255;
 
 const errorMessage = (error) => (error && error.message) || String(error);
 
@@ -54,8 +59,52 @@ const sendWith = async (sender, message) => {
   }
 };
 
+/**
+ * Sends one program's message on one channel, unless send_log already has a
+ * `sent` row for it (and `force` is off), then records the attempt.
+ * A send_log read failure blocks the send, to avoid sending twice.
+ */
+const sendChannel = async ({ date, program, channel, mode, force, message, channelSenders }) => {
+  const base = (sender) => ({ program, channel, sender: sender.name });
+
+  if (!force) {
+    let rows;
+    try {
+      rows = await selectSendLog(date, program, channel, mode);
+    } catch (error) {
+      return channelSenders.map((sender) => ({
+        ...base(sender),
+        ok: false,
+        error: `Send log check failed: ${errorMessage(error)}`,
+      }));
+    }
+    if (rows.some((row) => row.status === 'sent')) {
+      return channelSenders.map((sender) => ({ ...base(sender), ok: true, skipped: true }));
+    }
+  }
+
+  const entries = await Promise.all(channelSenders.map((sender) => sendWith(sender, message)));
+  const ids = entries.filter((entry) => entry.ok && entry.id !== undefined).map((entry) => String(entry.id));
+  try {
+    await insertSendLog({
+      date,
+      program,
+      channel,
+      mode,
+      status: entries.every((entry) => entry.ok) ? 'sent' : 'failed',
+      providerMessageId: ids.length ? ids.join(', ').slice(0, PROVIDER_ID_MAX_LENGTH) : null,
+    });
+  } catch (error) {
+    const logError = `Send log write failed: ${errorMessage(error)}`;
+    return entries.map((entry) => ({ ...entry, logError }));
+  }
+  return entries;
+};
+
+const isOk = (result) => result.ok && !result.logError;
+
 const getStatus = (results) => {
-  const okCount = results.filter((result) => result.ok).length;
+  const okCount = results.filter(isOk).length;
   if (results.length && okCount === results.length) {
     return 'sent';
   }
@@ -64,7 +113,8 @@ const getStatus = (results) => {
 
 /**
  * Runs the daily send for one date: content → send-day rules → render → send
- * via every sender for each program.
+ * via every sender for each program. Each program/channel is sent at most once
+ * per date and mode (tracked in send_log) unless `force` is set.
  *
  * Live senders are used only when `dryRun` is explicitly `false`.
  *
@@ -75,6 +125,7 @@ const getStatus = (results) => {
  * @param {('time4mishna'|'time4nach'|'combined')[]} [options.programs] Defaults to the send config default.
  * @param {string} [options.outboxDir] For the dry-run file sender.
  * @param {{ log: (line: string) => void }} [options.logger] For the dry-run console sender.
+ * @param {boolean} [options.force=false] Send even if send_log already has a `sent` row.
  * @returns {Promise<SendReport>}
  */
 const runDailySend = async ({
@@ -84,6 +135,7 @@ const runDailySend = async ({
   programs = getSendConfig({}).programs,
   outboxDir,
   logger,
+  force = false,
 } = {}) => {
   const mode = dryRun === false ? 'live' : 'dry-run';
   const report = { date, mode };
@@ -98,6 +150,7 @@ const runDailySend = async ({
 
   const senders = getSenders({ mode, channels, outboxDir, logger });
 
+  const activeChannels = [...new Set(senders.map((sender) => sender.channel))];
   const results = [];
   for (const program of programs) {
     let message;
@@ -109,7 +162,15 @@ const runDailySend = async ({
       );
       continue;
     }
-    results.push(...(await Promise.all(senders.map((sender) => sendWith(sender, message)))));
+
+    // Keyed by sender so the report keeps getSenders() order.
+    const entries = new Map();
+    for (const channel of activeChannels) {
+      const channelSenders = senders.filter((sender) => sender.channel === channel);
+      const channelEntries = await sendChannel({ date, program, channel, mode, force, message, channelSenders });
+      channelSenders.forEach((sender, index) => entries.set(sender, channelEntries[index]));
+    }
+    results.push(...senders.map((sender) => entries.get(sender)));
   }
 
   const status = getStatus(results);

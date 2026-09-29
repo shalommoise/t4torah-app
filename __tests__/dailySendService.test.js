@@ -4,9 +4,15 @@ const path = require('path');
 const { getDailyContent } = require('../src/services/dailyContentService');
 const { getSenders } = require('../src/services/senders');
 const { runDailySend } = require('../src/services/dailySendService');
+const { insertSendLog, selectSendLog } = require('../src/models/sendLogModel');
 
 jest.mock('../src/services/dailyContentService', () => ({
   getDailyContent: jest.fn(),
+}));
+
+jest.mock('../src/models/sendLogModel', () => ({
+  insertSendLog: jest.fn(),
+  selectSendLog: jest.fn(),
 }));
 
 jest.mock('../src/services/senders', () => ({
@@ -53,6 +59,8 @@ const fakeSender = (name, channel, send) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  selectSendLog.mockResolvedValue([]);
+  insertSendLog.mockResolvedValue({ insertId: 1 });
 });
 
 describe('runDailySend', () => {
@@ -214,6 +222,188 @@ describe('runDailySend', () => {
     const error = Object.assign(new Error('bad date'), { status: 400 });
     getDailyContent.mockRejectedValue(error);
     await expect(runDailySend({ date: 'nope' })).rejects.toBe(error);
+  });
+});
+
+describe('runDailySend send log (idempotency)', () => {
+  const sentRow = { status: 'sent' };
+
+  test('checks and records each program/channel for the date and mode', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([
+      fakeSender('console-email', 'email'),
+      fakeSender('file-email', 'email'),
+      fakeSender('fake-whatsapp', 'whatsapp'),
+    ]);
+
+    await runDailySend({ date: '2026-09-28', programs: ['time4mishna'] });
+
+    expect(selectSendLog.mock.calls).toEqual([
+      ['2026-09-28', 'time4mishna', 'email', 'dry-run'],
+      ['2026-09-28', 'time4mishna', 'whatsapp', 'dry-run'],
+    ]);
+    expect(insertSendLog.mock.calls).toEqual([
+      [
+        {
+          date: '2026-09-28',
+          program: 'time4mishna',
+          channel: 'email',
+          mode: 'dry-run',
+          status: 'sent',
+          providerMessageId: 'console-email-time4mishna, file-email-time4mishna',
+        },
+      ],
+      [
+        {
+          date: '2026-09-28',
+          program: 'time4mishna',
+          channel: 'whatsapp',
+          mode: 'dry-run',
+          status: 'sent',
+          providerMessageId: 'fake-whatsapp-time4mishna',
+        },
+      ],
+    ]);
+  });
+
+  test('skips a program/channel already logged sent, still sending the rest', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const email = fakeSender('fake-email', 'email');
+    const whatsapp = fakeSender('fake-whatsapp', 'whatsapp');
+    getSenders.mockReturnValue([email, whatsapp]);
+    selectSendLog.mockImplementation(async (_date, program, channel) =>
+      program === 'time4mishna' && channel === 'email' ? [{ status: 'failed' }, sentRow] : []
+    );
+
+    const report = await runDailySend({ date: '2026-09-28' });
+
+    expect(report).toMatchObject({ status: 'sent', ok: true });
+    expect(report.results).toEqual([
+      { program: 'time4mishna', channel: 'email', sender: 'fake-email', ok: true, skipped: true },
+      { program: 'time4mishna', channel: 'whatsapp', sender: 'fake-whatsapp', ok: true, id: 'fake-whatsapp-time4mishna' },
+      { program: 'time4nach', channel: 'email', sender: 'fake-email', ok: true, id: 'fake-email-time4nach' },
+      { program: 'time4nach', channel: 'whatsapp', sender: 'fake-whatsapp', ok: true, id: 'fake-whatsapp-time4nach' },
+    ]);
+    expect(email.send).toHaveBeenCalledTimes(1);
+    expect(email.send.mock.calls[0][0].program).toBe('time4nach');
+    expect(insertSendLog).toHaveBeenCalledTimes(3);
+  });
+
+  test('a previous failed attempt does not block a retry', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const email = fakeSender('fake-email', 'email');
+    getSenders.mockReturnValue([email]);
+    selectSendLog.mockResolvedValue([{ status: 'failed' }]);
+
+    await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(email.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('force sends again without reading the log, and still records', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const email = fakeSender('fake-email', 'email');
+    getSenders.mockReturnValue([email]);
+    selectSendLog.mockResolvedValue([sentRow]);
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'], force: true });
+
+    expect(selectSendLog).not.toHaveBeenCalled();
+    expect(email.send).toHaveBeenCalledTimes(1);
+    expect(insertSendLog).toHaveBeenCalledTimes(1);
+    expect(report.results[0]).not.toHaveProperty('skipped');
+  });
+
+  test('logs failed when any sender on the channel fails', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([
+      fakeSender('ok-email', 'email'),
+      fakeSender('bad-email', 'email', async () => {
+        throw new Error('boom');
+      }),
+    ]);
+
+    await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(insertSendLog).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'failed', providerMessageId: 'ok-email-time4nach' })
+    );
+  });
+
+  test('uses the mode in the log, so a dry-run does not block live', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([fakeSender('live-email', 'email')]);
+
+    await runDailySend({ date: '2026-09-28', programs: ['time4nach'], dryRun: false });
+
+    expect(selectSendLog).toHaveBeenCalledWith('2026-09-28', 'time4nach', 'email', 'live');
+    expect(insertSendLog).toHaveBeenCalledWith(expect.objectContaining({ mode: 'live' }));
+  });
+
+  test('a send log read failure blocks that channel only', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const email = fakeSender('fake-email', 'email');
+    const whatsapp = fakeSender('fake-whatsapp', 'whatsapp');
+    getSenders.mockReturnValue([email, whatsapp]);
+    selectSendLog.mockImplementation(async (_date, _program, channel) => {
+      if (channel === 'email') throw new Error('connection refused');
+      return [];
+    });
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(report.status).toBe('partial');
+    expect(report.results[0]).toEqual({
+      program: 'time4nach',
+      channel: 'email',
+      sender: 'fake-email',
+      ok: false,
+      error: 'Send log check failed: connection refused',
+    });
+    expect(email.send).not.toHaveBeenCalled();
+    expect(whatsapp.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('a send log write failure is reported and makes the run not ok', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([fakeSender('fake-email', 'email')]);
+    insertSendLog.mockRejectedValue(new Error('disk full'));
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(report).toMatchObject({ status: 'failed', ok: false });
+    expect(report.results).toEqual([
+      {
+        program: 'time4nach',
+        channel: 'email',
+        sender: 'fake-email',
+        ok: true,
+        id: 'fake-email-time4nach',
+        logError: 'Send log write failed: disk full',
+      },
+    ]);
+  });
+
+  test('truncates a long provider id list to the column size', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([
+      fakeSender('a'.repeat(200), 'email'),
+      fakeSender('b'.repeat(200), 'email'),
+    ]);
+
+    await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(insertSendLog.mock.calls[0][0].providerMessageId).toHaveLength(255);
+  });
+
+  test('skipped Shabbos and missing dates never touch the send log', async () => {
+    getSenders.mockReturnValue([fakeSender('x', 'email')]);
+    getDailyContent.mockResolvedValue(content({ date: dateRow({ day_of_week: 'Shabbos' }) }));
+    await runDailySend({ date: '2026-10-03' });
+    getDailyContent.mockResolvedValue(null);
+    await runDailySend({ date: '2030-01-01' });
+    expect(selectSendLog).not.toHaveBeenCalled();
+    expect(insertSendLog).not.toHaveBeenCalled();
   });
 });
 

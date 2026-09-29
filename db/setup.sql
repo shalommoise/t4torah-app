@@ -111,3 +111,19 @@ CREATE TABLE time4nach_daily_schedule (
   FOREIGN KEY (time4nach_shiur_id) REFERENCES time4nach_shiurim(time4nach_shiur_id),
   FOREIGN KEY (date_id) REFERENCES dates_table(date_id)
 ); 
+
+-- Daily send automation (feature/send-automation, backlog D2).
+-- One row per send attempt per date/program/channel/mode; a 'sent' row makes
+-- later runs skip that combination unless forced.
+CREATE TABLE send_log (
+  send_log_id INT NOT NULL AUTO_INCREMENT,
+  send_date VARCHAR(12) NOT NULL,
+  program ENUM('time4mishna', 'time4nach', 'combined') NOT NULL,
+  channel ENUM('email', 'whatsapp') NOT NULL,
+  mode ENUM('dry-run', 'live') NOT NULL,
+  status ENUM('sent', 'failed') NOT NULL,
+  provider_message_id VARCHAR(255),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (send_log_id),
+  INDEX send_log_lookup (send_date, program, channel, mode)
+);
