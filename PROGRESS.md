@@ -176,3 +176,25 @@ Decisions / for owner review:
 `npm run test:ci` → 17 suites, 156 tests passing.
 
 Next up: D2 (send log + idempotency). Adds a `send_log` table to `db/setup.sql` (schema addition only; not run) and a `force` option to `runDailySend`.
+
+## 2026-09-29 — run: D2 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **D2 Idempotency / send log.**
+  - **Schema addition (not run):** new `send_log` table appended to `db/setup.sql`. Columns: `send_log_id` PK, `send_date` VARCHAR(12) (same format as `dates_table.gregorian_date`), `program` / `channel` / `mode` / `status` ENUMs, `provider_message_id` VARCHAR(255), `created_at` TIMESTAMP, plus an index on `(send_date, program, channel, mode)`. Nothing else in `setup.sql` changed. `setup.sql` drops and recreates the whole database, so **for an existing database run only the `CREATE TABLE send_log …` statement.**
+  - **Model** `src/models/sendLogModel.js`: `insertSendLog({ date, program, channel, mode, status, providerMessageId })` and `selectSendLog(date, program, channel, mode)`, using `?` placeholders only.
+  - **Dispatch:** `runDailySend` gains `force = false`. For each program/channel, it skips when send_log already has a `sent` row for that date and mode (result entries marked `skipped: true`, `ok: true`). Otherwise it sends and writes one row per program/channel: `sent` if every sender on that channel succeeded, else `failed`. `provider_message_id` holds the successful sender ids, comma-joined and capped at 255 characters. The report keeps D1's sender order.
+
+Decisions / for owner review:
+
+- **Added a `mode` column** (not in the backlog's column list). Without it, a dry-run logged as `sent` would make the real live send skip that day. Skips are checked per mode.
+- **An earlier `failed` row doesn't block a retry.** Only `sent` rows cause a skip. Every attempt is kept as history (no unique key).
+- **A send_log read failure blocks that channel** (`ok: false`, "Send log check failed: …") rather than risking a double send. Use `force` to send anyway.
+- **A send_log write failure after a successful send** keeps `ok: true` on the entry but adds `logError`, and the run counts as failed (`ok: false`), so the job exits non-zero and a person looks at it.
+- Tests mock `sendLogModel` (and `src/config/env` in the model test); no DB connection. The existing D1 tests only gained the model mock; no assertions changed.
+- No new dependencies.
+
+`npm run test:ci` → 18 suites, 169 tests passing.
+
+Next up: D3 (CLI job `jobs/dailySend.js` + `send:daily`). It should load dotenv, use `getSendConfig()`, map `--dry-run=false` to `dryRun: false`, pass `--force`, and close the DB pool on exit.
