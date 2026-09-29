@@ -3,4 +3,5 @@ node_modules
 .env
 db/calendar
 calendar/data/
-calendar/generatedoutbox/
+calendar/generated/
+outbox/
