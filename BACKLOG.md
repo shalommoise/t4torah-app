@@ -12,26 +12,17 @@ Work top to bottom. Read CLAUDE.md first.
 - [x] **A3 Shiur label formatting** — pure helpers: Mishna range label (e.g. `Brachos 1:1–1:4`, and cross-masechta `Brachos 9:5 – Peah 1:3`) from the joined schedule row fields; Nach label (`<sefer_name> <perek>`). Reuse/align with `parseShiurTitle` in `utils/utils.js`. Handle `null` shiur (no-shiur days) and `additional_notice`.
 - [x] **A4 Sefaria links** — helper that builds a Sefaria URL for a Mishna range and a Nach perek (e.g. `https://www.sefaria.org/Mishnah_Berakhot.1.1-4`). Needs a masechta → Sefaria name map: derive from `db/data/masechtaNames.json` / `SefariaUtils/getmishnayos.js` if possible; otherwise mark `[!]` and use `alt_names`. No network calls. — **reverted in R1 (owner: no external links).**
 
-## R. Revisions
-
-- [x] **R1 Remove Sefaria links** — owner decision: daily messages contain no external links.
-  Delete `src/services/sefariaLinkService.js` and its tests. Remove all link output from
-  `emailRenderer.js` and `src/templates/dailyEmail.html` (including the "Learn on Sefaria"
-  text), and any link field from the `DailyMessage` model. Leave the existing
-  `SefariaUtils/` folder alone (it's pre-branch code). Update tests; `npm run test:ci` must pass.
-  Note the reversal of A4 in PROGRESS.md.
-
 ## B. Rendering
 
 - [x] **B1 Message model** — define (JSDoc) the `DailyMessage` shape: `{ date, program: 'time4mishna'|'time4nach'|'combined', email: { subject, html, text }, whatsapp: { text } }`.
 - [x] **B2 Email renderer** — `src/services/render/emailRenderer.js`: HTML + plain-text email from daily content. Template in `src/templates/dailyEmail.html` with simple `{{token}}` replacement (no templating dependency). Inline CSS, mobile-friendly, Hebrew date shown RTL (`dir="rtl"` on that element), special_date / additional_notice shown when present. Snapshot or string-contains tests.
-- [x] **R1 Remove Sefaria links** — *(duplicate of R1 above; done in `02c76ac`, verified 2026-09-29)* — owner decision: daily messages contain no external links. Delete `src/services/sefariaLinkService.js` and its tests. Remove all link output from `emailRenderer.js` and `src/templates/dailyEmail.html` (including the "Learn on Sefaria" text), and any link field from the `DailyMessage` model. Leave the existing `SefariaUtils/` folder alone (pre-branch code). Update tests; `npm run test:ci` must pass. Note the reversal of A4 in PROGRESS.md.
-- [x] **B3 WhatsApp renderer** — `src/services/render/whatsappRenderer.js`: WhatsApp-formatted text (`*bold*`, line breaks, no links). Keep under 1,000 characters; test the limit.
-- [x] **B4 Subject lines** — deterministic subject format, e.g. `Time4Mishna – Monday 28 Sep | 26 Tishrei`. Put the format in one place so it's easy to change.
+- [ ] **R1 Remove Sefaria links** — owner decision: daily messages contain no external links. Delete `src/services/sefariaLinkService.js` and its tests. Remove all link output from `emailRenderer.js` and `src/templates/dailyEmail.html` (including the "Learn on Sefaria" text), and any link field from the `DailyMessage` model. Leave the existing `SefariaUtils/` folder alone (pre-branch code). Update tests; `npm run test:ci` must pass. Note the reversal of A4 in PROGRESS.md.
+- [ ] **B3 WhatsApp renderer** — `src/services/render/whatsappRenderer.js`: WhatsApp-formatted text (`*bold*`, line breaks, no links). Keep under 1,000 characters; test the limit.
+- [ ] **B4 Subject lines** — deterministic subject format, e.g. `Time4Mishna – Monday 28 Sep | 26 Tishrei`. Put the format in one place so it's easy to change.
 
 ## C. Sending (dry-run only)
 
-- [x] **C1 Sender interface** — `src/services/senders/index.js`: documented interface `{ name, channel: 'email'|'whatsapp', send(message) → Promise<{ ok, id?, error? }> }`, plus `getSenders(config)` factory.
+- [ ] **C1 Sender interface** — `src/services/senders/index.js`: documented interface `{ name, channel: 'email'|'whatsapp', send(message) → Promise<{ ok, id?, error? }> }`, plus `getSenders(config)` factory.
 - [ ] **C2 Console + file senders** — `consoleSender` (logs a summary) and `fileSender` (writes `outbox/<date>/<channel>-<program>.{html,txt}`; `outbox/` is gitignored). These are the defaults.
 - [ ] **C3 Live-mode stubs** — `emailProviderSender` and `whatsappProviderSender` stubs that throw `Not implemented: provider not chosen` and are only selectable when `SEND_MODE=live`. Tests prove dry-run is the default and live mode without a provider fails loudly.
 - [ ] **C4 Config** — `src/config/send.js` reading `SEND_MODE` (`dry-run` default), `SEND_CHANNELS` (`email,whatsapp`), `SEND_PROGRAMS`, `OUTBOX_DIR`. Add placeholders to a new `.env.example` (create it; never touch `.env`).
