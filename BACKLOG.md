@@ -14,7 +14,7 @@ Work top to bottom. Read CLAUDE.md first.
 
 ## B. Rendering
 
-- [ ] **B1 Message model** — define (JSDoc) the `DailyMessage` shape: `{ date, program: 'time4mishna'|'time4nach'|'combined', email: { subject, html, text }, whatsapp: { text } }`.
+- [x] **B1 Message model** — define (JSDoc) the `DailyMessage` shape: `{ date, program: 'time4mishna'|'time4nach'|'combined', email: { subject, html, text }, whatsapp: { text } }`.
 - [ ] **B2 Email renderer** — `src/services/render/emailRenderer.js`: HTML + plain-text email from daily content. Template in `src/templates/dailyEmail.html` with simple `{{token}}` replacement (no templating dependency). Inline CSS, mobile-friendly, Hebrew date shown RTL (`dir="rtl"` on that element), special_date / additional_notice shown when present. Snapshot or string-contains tests.
 - [ ] **B3 WhatsApp renderer** — `src/services/render/whatsappRenderer.js`: WhatsApp-formatted text (`*bold*`, line breaks, links on their own line). Keep under 1,000 characters; test the limit.
 - [ ] **B4 Subject lines** — deterministic subject format, e.g. `Time4Mishna – Monday 28 Sep | 26 Tishrei`. Put the format in one place so it's easy to change.
