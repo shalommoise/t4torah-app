@@ -121,3 +121,20 @@ Notes:
 `npm run test:ci` → 14 suites, 119 tests passing.
 
 Next up: C3 (live-mode stubs → `SENDER_REGISTRY.live`), C4 (config + `.env.example`).
+
+## 2026-09-29 — run: C3 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **C3 Live-mode stubs** (`src/services/senders/providerSenders.js`): `emailProviderSender` and `whatsappProviderSender` implement the Sender interface, and `send()` always rejects with `Not implemented: provider not chosen`. There's no provider code, no dependency and no network access. They are registered only in `SENDER_REGISTRY.live`.
+
+Decisions / for owner review:
+
+- **The stubs reject; they don't return `{ ok: false }`.** The backlog says they "throw", and a rejection is louder than a failed result. D1 must therefore treat a rejected `send()` as a failure for that channel (e.g. `Promise.allSettled`), not only `ok: false`. That keeps "one sender failing must not stop the others".
+- **Mode selection is explicit.** `getSenders()` never reads `process.env`; `SEND_MODE` is turned into `config.mode` by C4. A test confirms that setting `SEND_MODE=live` in the environment doesn't select the stubs on its own.
+- Live mode uses only the provider senders (no console/file alongside them).
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 15 suites, 126 tests passing.
+
+Next up: C4 (config: `src/config/send.js` + `.env.example`).
