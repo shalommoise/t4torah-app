@@ -62,3 +62,25 @@ For owner review:
 - **B3 still says "links on their own line"** (WhatsApp renderer). That conflicts with the no-links decision. I left the backlog text unchanged. Please reword it, or a future run should treat the no-links decision as overriding it.
 
 `npm run test:ci` → 9 suites, 73 tests passing.
+
+## 2026-09-29 — run: R1 (verify), B3, B4 (Claude, local, owner-supervised)
+
+**Correction to the previous entry.** The owner edited BACKLOG.md in the working tree during the R1 session: added a second R1 entry under section B, reworded B3 to "no links", and annotated A4. The R1 commit (`02c76ac`) used `git add BACKLOG.md` and swept those edits in without them being noticed. No content was lost, but it means the previous entry's claim that "B3 still says links on their own line" was wrong. Runs now review the staged diff before every commit.
+
+Completed 3 items:
+
+- **R1 (duplicate entry)**: the code work landed in `02c76ac`. This run checked that `sefariaLinkService` and its tests are gone and that the renderers/template have no link output, then ticked the second R1 entry with a pointer to `02c76ac`. R1 is now enforced more strictly (see decisions below).
+- **B3 WhatsApp renderer** (`src/services/render/whatsappRenderer.js`): `renderWhatsapp(content, { program })` → `{ text }`. `*bold*` title and shiur labels, `_italic_` special date and notices, blank line between blocks. Section titles appear only for `combined`, since a single-program header already names the program. Output is capped below 1,000 Unicode code points and truncated with `…`. Shared section building has moved to `src/services/render/dailySections.js`, which the email renderer now uses too.
+- **B4 Subject lines** (`src/services/render/subjectLine.js`): `buildSubject(dateRow, program)` → e.g. `Time4Mishna – Monday 28 Sep | 17 Tishrei`. The format is the single `SUBJECT_FORMAT` constant. The Hebrew part is `hebrew_date` (Hebcal `hdate`, e.g. `17 Tishrei 5787`) without its year, and is dropped if missing. Uses fixed English day/month names because `Intl` en-GB gives `Sept` on this machine's ICU (77.1).
+
+Decisions / for owner review:
+
+- **URLs in DB free text are stripped.** To make "no external links anywhere" hold, both renderers remove `http(s)://…` and `www.…` from `special_date` and `additional_notice` before output (`stripLinks`). A notice like "Register at https://x.com today" renders as "Register at today". If notices should instead be rejected or flagged, say so.
+- WhatsApp text doesn't escape `*`/`_` in DB text (WhatsApp has no escape syntax); a notice containing them may render with odd formatting.
+- `combined` subject/title is `Time4Mishna & Time4Nach`.
+- The subject line has no special_date; say if you want one.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 12 suites, 99 tests passing.
+
+Next up: C1 (sender interface), C2 (console + file senders), C3 (live-mode stubs).
