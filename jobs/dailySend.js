@@ -8,6 +8,7 @@
 // missing date, 2 usage/config error.
 
 const { CHANNELS } = require('../src/services/senders');
+const { londonToday } = require('../src/utils/londonDate');
 
 const USAGE = `Usage: npm run send:daily -- [options]
 
@@ -24,18 +25,6 @@ const EXIT_USAGE = 2;
 class UsageError extends Error {}
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * Today's date in Europe/London as YYYY-MM-DD.
- * TODO(D4): replace with the shared London date helper.
- */
-const londonToday = (now = new Date()) =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/London',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now);
 
 const parseBoolean = (name, value) => {
   if (value === undefined || value === 'true') {
