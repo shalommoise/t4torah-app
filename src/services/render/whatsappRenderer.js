@@ -71,8 +71,8 @@ const renderSection = ({ title, items }, showTitle) => {
  * Renders the daily WhatsApp message from `getDailyContent` output: `*bold*`
  * title and shiurim, `_italic_` special date and notices, blank lines between
  * sections, no links. Formatting characters (`*_~` and backticks) are
- * stripped from DB text first, since WhatsApp can't escape them. Always under WHATSAPP_MAX_LENGTH characters; longer
- * output is truncated with an ellipsis.
+ * stripped from DB text first, since WhatsApp can't escape them. Always under
+ * WHATSAPP_MAX_LENGTH characters; longer output is truncated with an ellipsis.
  *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
  * @param {{ program: 'time4mishna'|'time4nach'|'combined' }} options

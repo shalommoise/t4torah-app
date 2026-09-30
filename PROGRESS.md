@@ -331,3 +331,60 @@ For owner review (pre-branch behaviour, not changed):
 `npm run test:ci` → 27 suites, 331 tests passing.
 
 Next up: F3 (final review pass + summary). It's the last backlog item.
+
+## 2026-09-30 — F3 final review pass and branch summary (Claude, local, owner-requested)
+
+### Review
+
+Read the full diff `master` (`a6b2e4c`, unchanged since the branch was cut) → `feature/send-automation`: 58 files, all new source, schema, config and docs.
+
+- **Cleanup:** removed three exports nothing used (`DEFAULT_PROGRAM` in `sendPreviewService`, `DEFAULT_OUTBOX_DIR` in `fileSender`, `SENDER_REGISTRY` in `senders/index`; the constants stay internal) and rewrapped one JSDoc paragraph in `whatsappRenderer.js`. No behaviour change. Exports used only by tests are tested helpers and were kept.
+- **Console output:** the only `console` calls in new code are the CLI job's intended output (`jobs/dailySend.js`). No `TODO`/`FIXME`/`debugger` left.
+- **Hard-rule check:**
+  - No network code in the send path (no axios/http/fetch).
+  - `.env` not tracked; `.env.example` holds placeholders only.
+  - `db/data/*` and `imgs/*` untouched.
+  - No `.skip`/`.only`, and no test deleted (`masechtaRoute.test.js` was *moved* to `__tests__/integration/` in setup).
+  - No new runtime dependency; the only dependency changes are the owner's `1d65a45` (jest → devDependencies, mysql2 ^3.24.4).
+  - `db/setup.sql` changes are additions only.
+
+`npm run test:ci` → **27 suites, 331 tests passing** (baseline at branch start: 4 suites / 17 tests).
+
+### What was built
+
+A provider-agnostic daily send pipeline that defaults to dry-run. See `docs/SENDING.md` for the full guide.
+
+| Area | Items | Where |
+|---|---|---|
+| Content | A1 content service, A2 send-day rules, A3 shiur labels | `src/services/dailyContentService.js`, `sendRules.js`, `shiurLabelService.js` |
+| Rendering | B1 `DailyMessage`, B2 email (HTML + text), B3 WhatsApp, B4 subject line | `src/services/render/*`, `src/templates/dailyEmail.html` |
+| Revisions | R1 no external links (reverses A4 Sefaria links), R2 special date in subject, R3 strip WhatsApp formatting chars, R4 keep stripping URLs | renderers + `dailySections.stripLinks` |
+| Sending | C1 sender interface + registry, C2 console/file dry-run senders, C3 live stubs, C4 config | `src/services/senders/*`, `src/config/send.js`, `.env.example` |
+| Orchestration | D1 dispatch, D2 idempotency (`send_log`), D3 CLI job, D4 London dates | `src/services/dailySendService.js`, `src/models/sendLogModel.js`, `jobs/dailySend.js` (`npm run send:daily`), `src/utils/londonDate.js` |
+| API | E1 `GET /api/v1/sends/preview` + `/preview.html`, E2 `GET /api/v1/sends/log` | `src/routes/sendsRouter.js` → `sendsController.js` → `sendPreviewService.js` / `sendLogService.js` |
+| Docs & tests | F1 docs, F2 tests for existing dates/tanach/time4mishna/time4nach routes | `docs/SENDING.md`, `API_ROUTES.md`, `README.md`, `__tests__/*Route.test.js` |
+
+Also fixed during setup/runs: the `.gitignore` line merged by the setup commit (`11cd7a1`).
+
+### Schema changes
+
+- **New table `send_log`** (appended to `db/setup.sql`): `send_log_id`, `send_date`, `program`, `channel`, `mode`, `status`, `provider_message_id`, `created_at`, index on `(send_date, program, channel, mode)`. **On an existing database run only the `CREATE TABLE send_log …` statement**, because `setup.sql` drops and recreates the whole database. Nothing was run against any database on this branch.
+
+### Open decisions for the owner
+
+1. **Choose providers** (email: MailerLite / Brevo; WhatsApp BSP: Wati / AiSensy). Live senders are stubs until then; follow the checklist in `docs/SENDING.md`.
+2. **Audience model:** `DailyMessage` has no recipients. Decide how lists/segments map to programs before implementing a provider.
+3. **`SEND_PROGRAMS` default** is `time4mishna,time4nach` (separate messages); `combined` is available.
+4. **Auth for `/api/v1/sends/*`:** public like every other route (no auth layer exists). They can't send and show no recipients, but say if they should be private.
+5. **Subject line from DB text:** `special_date` goes into the subject with links removed but line breaks kept. A real provider integration should collapse whitespace/newlines in the subject.
+6. **Pre-branch behaviour found in F2 (not changed):** `validateNumericParam` / `parseOptionalInt` accept `1e3`, `-5`, `0x1A`, `" 12 "`; `getTime4MishnaShiurById` 500s on a null `shiur_title`.
+
+### Suggested next steps
+
+1. Review the branch (e.g. open a PR `feature/send-automation` → `master`); nothing here has been merged.
+2. Create `send_log` on the real database, then run `npm run send:daily -- --date=<a seeded date>` in dry-run and inspect `outbox/` and `GET /api/v1/sends/log`.
+3. Check that `dates_table` is seeded well ahead: a missing date makes the job exit 1.
+4. Once providers are chosen, implement `providerSenders.js` per the checklist, test against a test list/number, then add the cron line from `docs/SENDING.md`.
+5. Optional follow-ups: stricter numeric id validation; a `mode` filter on `/sends/log`; auth on `/sends/*`.
+
+**All backlog items are `[x]` (none `[!]`). Per CLAUDE.md step 7, unattended runs should make no further changes until the owner adds new items.**

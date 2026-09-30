@@ -58,4 +58,4 @@ const createFileSender = (channel, config = {}) => {
   };
 };
 
-module.exports = { createFileSender, DEFAULT_OUTBOX_DIR };
+module.exports = { createFileSender };

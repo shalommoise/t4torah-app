@@ -44,4 +44,4 @@ const getSendPreview = async ({ date, program = DEFAULT_PROGRAM, channel } = {})
   return preview;
 };
 
-module.exports = { getSendPreview, DEFAULT_PROGRAM };
+module.exports = { getSendPreview };

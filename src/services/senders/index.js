@@ -101,4 +101,4 @@ const getSenders = (config = {}, registry = SENDER_REGISTRY) => {
   );
 };
 
-module.exports = { CHANNELS, MODES, DEFAULT_MODE, SENDER_REGISTRY, assertSender, getSenders };
+module.exports = { CHANNELS, MODES, DEFAULT_MODE, assertSender, getSenders };
