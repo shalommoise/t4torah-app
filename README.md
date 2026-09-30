@@ -20,6 +20,7 @@ Task is to automate all Time4 Torah Porgrams
 - integrate with mailchimp
 - Admin Level users (time4torah and jfuture emails only)
 - Admin Upload of new summarry sheets
+- Daily email + WhatsApp send automation (dry-run until a provider is chosen): see [docs/SENDING.md](docs/SENDING.md)
 
 
 # bonus

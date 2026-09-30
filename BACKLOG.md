@@ -53,6 +53,6 @@ Work top to bottom. Read CLAUDE.md first.
 
 ## F. Docs & hygiene
 
-- [ ] **F1 Docs** — `docs/SENDING.md`: architecture, config, how to preview, how to run the job via cron (e.g. `crontab` line for 5am London), and a checklist for plugging in a real provider later. Update `API_ROUTES.md` for the new routes and README features list.
+- [x] **F1 Docs** — `docs/SENDING.md`: architecture, config, how to preview, how to run the job via cron (e.g. `crontab` line for 5am London), and a checklist for plugging in a real provider later. Update `API_ROUTES.md` for the new routes and README features list.
 - [ ] **F2 Tests for existing untested controllers** — add mocked supertest coverage for dates (`/dates`, `/dates/:id/full`), tanach, time4mishna and time4nach routes, including 400/404 cases.
 - [ ] **F3 Final review pass** — read the whole diff vs `master`, remove dead code/console noise, make sure `npm run test:ci` passes, and write a PROGRESS.md summary listing: what was built, schema changes, open decisions for the owner, and suggested next steps.
