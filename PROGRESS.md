@@ -310,3 +310,24 @@ For owner review:
 `npm run test:ci` → 23 suites, 270 tests passing.
 
 Next up: F2 (tests for existing untested controllers), then F3 (final review pass).
+
+## 2026-09-30 — run: F2 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **F2 Tests for existing untested controllers**: 4 new supertest suites with mocked models, no controller/route code changed.
+  - `datesRoute.test.js`: `/dates` (filter + pagination mapping, `is_yom_tov` true/1/false/0, limit cap 500, 400s for bad boolean/limit/offset, 500 on model error, 405), `/dates/:id` (200, 400), `/dates/:id/full` (200 with both schedules, empty schedules, 404 without loading schedules, 400, 405).
+  - `tanachRoute.test.js`: `/tanach` filters, 500, 405; `/tanach/:id` 200, 400, 405.
+  - `time4mishnaRoute.test.js`: shiurim filters and 400s, shiur-by-id links (`shiur_link` / `shiur_text_link` / `text_link`), schedule pagination (cap 200) and 400s, schedule-by-id 200/400/405, 500 on model error.
+  - `time4nachRoute.test.js`: the same coverage for Time4Nach.
+  - The existing `getByIdNotFoundRoutes.test.js` already covered the get-by-id 404s, so they weren't duplicated.
+- `time4mishnaController` calls `dotenv.config()` and builds links from `BUCKET_PATH`. The test sets a dummy `BUCKET_PATH` before loading the app (dotenv never overrides a variable that's already set) and restores it afterwards, so it neither depends on nor sees the local `.env` value.
+
+For owner review (pre-branch behaviour, not changed):
+
+- **`validateNumericParam` is loose:** `Number.isInteger(Number(value))` accepts `1e3`, `-5`, `1.0`, `0x1A` and `" 12 "`, and the raw string is passed to SQL (still parameterised, so no injection; just odd matches or 404s). The same pattern is in the controllers' `parseOptionalInt`. A stricter `/^\d+$/` check would be a small follow-up item.
+- `getTime4MishnaShiurById` would 500 if a shiur row had a null `shiur_title` (`.split` on null).
+
+`npm run test:ci` → 27 suites, 331 tests passing.
+
+Next up: F3 (final review pass + summary). It's the last backlog item.
