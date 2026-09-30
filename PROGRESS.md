@@ -233,3 +233,20 @@ Decisions / for owner review:
 `npm run test:ci` → 19 suites, 206 tests passing.
 
 Next up: D4 (Europe/London today/tomorrow helper, tested across the late-October clock change); replace `londonToday` in `jobs/dailySend.js` with it.
+
+## 2026-09-30 — run: D4 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **D4 Send-time helper** (`src/utils/londonDate.js`): `londonToday(instant = new Date())` and `londonTomorrow(instant)` return Europe/London calendar dates as `YYYY-MM-DD`, and `addDays(date, n)` does calendar-day arithmetic. The date comes from `Intl.DateTimeFormat(...).formatToParts` with `timeZone: 'Europe/London'`, not from a locale's output format. No new dependency. `jobs/dailySend.js` now uses this helper (the D3 inline `Intl` one-liner is removed; the job still re-exports `londonToday`, so the D3 tests are unchanged).
+- **Tests:** both 2026 clock changes (25 Oct BST→GMT, including both 01:30s; 29 Mar GMT→BST), the midnight boundaries on each side (23:00 UTC in summer, 00:00 UTC in winter), year/month rollover, leap years, and bad input. One test shows why `tomorrow` uses calendar arithmetic: at 00:30 BST on 25 Oct, "now + 24h" is still the 25th (a 25-hour day), whereas `londonTomorrow` gives the 26th.
+- The date and job suites also pass with `TZ=UTC`, `America/New_York`, `Asia/Tokyo` and `Pacific/Kiritimati`, so the results don't depend on the server's time zone.
+
+Notes:
+
+- The first attempt at those time-zone runs used `npm run test:ci -- londonDate dailySendJob`. `--testPathIgnorePatterns` takes a list, so the file names became *extra ignore patterns*: those runs skipped exactly those two suites (18 suites / 175 tests instead of 20 / 238). They were rerun with `--testPathPatterns`. **For future runs:** filter with `npm run test:ci -- --testPathPatterns <pattern>`.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 20 suites, 238 tests passing.
+
+Next up: E1 (preview routes).
