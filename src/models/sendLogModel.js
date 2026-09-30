@@ -28,4 +28,17 @@ const selectSendLog = async (date, program, channel, mode) => {
   return rows;
 };
 
-module.exports = { insertSendLog, selectSendLog };
+/**
+ * All send attempts for a date, oldest first.
+ */
+const selectSendLogByDate = async (date) => {
+  const [rows] = await query(
+    `SELECT * FROM send_log
+    WHERE send_date = ?
+    ORDER BY send_log_id ASC`,
+    [date]
+  );
+  return rows;
+};
+
+module.exports = { insertSendLog, selectSendLog, selectSendLogByDate };

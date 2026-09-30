@@ -1,5 +1,5 @@
 const { query } = require('../src/config/env');
-const { insertSendLog, selectSendLog } = require('../src/models/sendLogModel');
+const { insertSendLog, selectSendLog, selectSendLogByDate } = require('../src/models/sendLogModel');
 
 jest.mock('../src/config/env', () => ({
   query: jest.fn(),
@@ -47,5 +47,18 @@ describe('selectSendLog', () => {
     expect(sql).toMatch(/FROM send_log\s+WHERE send_date = \? AND program = \? AND channel = \? AND mode = \?/);
     expect(sql).toMatch(/ORDER BY send_log_id ASC/);
     expect(params).toEqual(['2026-09-28', 'time4mishna', 'email', 'dry-run']);
+  });
+});
+
+describe('selectSendLogByDate', () => {
+  test('selects every attempt for a date with a placeholder', async () => {
+    const rows = [{ send_log_id: 1 }, { send_log_id: 2 }];
+    query.mockResolvedValue([rows]);
+
+    await expect(selectSendLogByDate('2026-09-28')).resolves.toBe(rows);
+
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toMatch(/FROM send_log\s+WHERE send_date = \?\s+ORDER BY send_log_id ASC/);
+    expect(params).toEqual(['2026-09-28']);
   });
 });

@@ -1,9 +1,14 @@
 const request = require('supertest');
 const app = require('../src/app');
 const { getSendPreview } = require('../src/services/sendPreviewService');
+const { getSendLog } = require('../src/services/sendLogService');
 
 jest.mock('../src/services/sendPreviewService', () => ({
   getSendPreview: jest.fn(),
+}));
+
+jest.mock('../src/services/sendLogService', () => ({
+  getSendLog: jest.fn(),
 }));
 
 const httpError = (status, message) => Object.assign(new Error(message), { status });
@@ -81,5 +86,52 @@ describe('GET /api/v1/sends/preview.html', () => {
 
     getSendPreview.mockRejectedValueOnce(httpError(404, 'No date row for 2030-01-01'));
     expect((await request(app).get('/api/v1/sends/preview.html?date=2030-01-01')).status).toBe(404);
+  });
+});
+
+describe('GET /api/v1/sends/log', () => {
+  test('returns the send log for a date', async () => {
+    const log = {
+      date: '2026-09-28',
+      entries: [
+        {
+          id: 1,
+          program: 'time4mishna',
+          channel: 'email',
+          mode: 'dry-run',
+          status: 'sent',
+          providerMessageId: 'console-email-time4mishna-2026-09-28',
+          createdAt: '2026-09-28T04:00:00.000Z',
+        },
+      ],
+    };
+    getSendLog.mockResolvedValue(log);
+
+    const res = await request(app).get('/api/v1/sends/log?date=2026-09-28');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(log);
+    expect(getSendLog).toHaveBeenCalledWith({ date: '2026-09-28' });
+  });
+
+  test('returns an empty list when nothing was sent', async () => {
+    getSendLog.mockResolvedValue({ date: '2026-09-29', entries: [] });
+    const res = await request(app).get('/api/v1/sends/log?date=2026-09-29');
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([]);
+  });
+
+  test('400 on a bad or missing date', async () => {
+    getSendLog.mockRejectedValue(httpError(400, 'date must be a valid date in YYYY-MM-DD format'));
+    const res = await request(app).get('/api/v1/sends/log');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'date must be a valid date in YYYY-MM-DD format' });
+    expect(getSendLog).toHaveBeenCalledWith({ date: undefined });
+  });
+
+  test.each(['post', 'put', 'patch', 'delete'])('is read-only: %s is not routed', async (method) => {
+    const res = await request(app)[method]('/api/v1/sends/log?date=2026-09-28');
+    expect(res.status).toBe(404);
+    expect(getSendLog).not.toHaveBeenCalled();
   });
 });

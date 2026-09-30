@@ -1,4 +1,5 @@
 const { getSendPreview } = require('../services/sendPreviewService');
+const { getSendLog } = require('../services/sendLogService');
 
 // Query values arrive as strings, or arrays when repeated; only single strings are accepted.
 const queryValue = (value) => (typeof value === 'string' ? value : value === undefined ? undefined : '');
@@ -29,4 +30,12 @@ const getPreviewHtml = async (req, res, next) => {
   }
 };
 
-module.exports = { getPreview, getPreviewHtml };
+const getLog = async (req, res, next) => {
+  try {
+    res.json(await getSendLog({ date: queryValue(req.query.date) }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getPreview, getPreviewHtml, getLog };
