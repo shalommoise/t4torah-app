@@ -34,7 +34,14 @@ const PROVIDER_ID_MAX_LENGTH = 255;
 
 const errorMessage = (error) => (error && error.message) || String(error);
 
-const renderMessage = (content, program) =>
+/**
+ * Renders one program's DailyMessage from `getDailyContent` output.
+ *
+ * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
+ * @param {'time4mishna'|'time4nach'|'combined'} program
+ * @returns {import('./render/dailyMessage').DailyMessage}
+ */
+const renderDailyMessage = (content, program) =>
   createDailyMessage({
     date: content.date.gregorian_date,
     program,
@@ -155,7 +162,7 @@ const runDailySend = async ({
   for (const program of programs) {
     let message;
     try {
-      message = renderMessage(content, program);
+      message = renderDailyMessage(content, program);
     } catch (error) {
       senders.forEach((sender) =>
         results.push({ program, channel: sender.channel, sender: null, ok: false, error: `Render failed: ${errorMessage(error)}` })
@@ -177,4 +184,4 @@ const runDailySend = async ({
   return { ...report, status, ok: status === 'sent', results };
 };
 
-module.exports = { runDailySend };
+module.exports = { runDailySend, renderDailyMessage };

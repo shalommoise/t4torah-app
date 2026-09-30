@@ -48,7 +48,7 @@ Work top to bottom. Read CLAUDE.md first.
 
 ## E. Admin preview API
 
-- [ ] **E1 Preview routes** — `GET /api/v1/sends/preview?date=YYYY-MM-DD&channel=email|whatsapp&program=...` returns rendered content as JSON; `GET /api/v1/sends/preview.html?date=...` returns the email HTML directly for viewing in a browser. 400 on bad date, 404 when no date row. Router → controller → service pattern; supertest tests with mocked service.
+- [x] **E1 Preview routes** — `GET /api/v1/sends/preview?date=YYYY-MM-DD&channel=email|whatsapp&program=...` returns rendered content as JSON; `GET /api/v1/sends/preview.html?date=...` returns the email HTML directly for viewing in a browser. 400 on bad date, 404 when no date row. Router → controller → service pattern; supertest tests with mocked service.
 - [ ] **E2 Send log route** — `GET /api/v1/sends/log?date=...` (read-only). Tests.
 
 ## F. Docs & hygiene
