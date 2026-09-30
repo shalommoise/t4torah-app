@@ -271,3 +271,23 @@ Decisions / for owner review:
 `npm run test:ci` → 22 suites, 255 tests passing.
 
 Next up: E2 (read-only send log route). It needs a `selectSendLogByDate(date)` model function, since `selectSendLog` needs program/channel/mode.
+
+## 2026-09-30 — run: E2 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **E2 Send log route**: `GET /api/v1/sends/log?date=YYYY-MM-DD` → `{ date, entries: [{ id, program, channel, mode, status, providerMessageId, createdAt }] }`, oldest attempt first. Read-only: only GET is routed; tests check POST/PUT/PATCH/DELETE return 404.
+  - Model: new `selectSendLogByDate(date)` in `sendLogModel.js` (`?` placeholder).
+  - Service: `src/services/sendLogService.js` validates the date with the existing `isValidGregorianDate` (400 otherwise, before any query) and maps DB columns to camelCase, so the API shape doesn't follow the table's column names.
+  - Controller/route added to the E1 `sendsController` / `sendsRouter`.
+
+Decisions / for owner review:
+
+- **A date with no attempts returns 200 with `entries: []`**, not 404. "Nothing sent yet" is a normal answer.
+- Includes both `dry-run` and `live` rows; filter on `mode` client-side. A `mode` query filter is easy to add if wanted.
+- Same as E1: **no authentication** (none exists in the app). The log shows only program/channel/status/ids, no message content or recipients.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 23 suites, 270 tests passing.
+
+Next up: F1 (docs: `docs/SENDING.md`, `API_ROUTES.md`, README).
