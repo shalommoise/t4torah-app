@@ -250,3 +250,24 @@ Notes:
 `npm run test:ci` → 20 suites, 238 tests passing.
 
 Next up: E1 (preview routes).
+
+## 2026-09-30 — run: E1 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **E1 Preview routes.** Router `src/routes/sendsRouter.js` (mounted at `/api/v1/sends/`) → controller `src/controllers/sendsController.js` → service `src/services/sendPreviewService.js`.
+  - `GET /api/v1/sends/preview?date=YYYY-MM-DD[&program=…][&channel=email|whatsapp]` → JSON `{ date, program, sendDay, email?: { subject, html, text }, whatsapp?: { text } }`. Omitting `channel` returns both; `program` defaults to `time4mishna`.
+  - `GET /api/v1/sends/preview.html?date=YYYY-MM-DD[&program=…]` → the email HTML with `Content-Type: text/html`.
+  - 400 for a bad date, unknown program or unknown channel (program/channel are checked before any DB lookup); 404 when the date isn't in `dates_table`. Errors are JSON `{ error }` from the existing error middleware, including on the `.html` route.
+  - Rendering reuses `renderDailyMessage` (exported from `dailySendService.js`, renamed from the private `renderMessage`), so previews match exactly what the job sends. Previews never build senders or read/write `send_log`; a test checks this.
+- A query parameter given twice (e.g. `channel=email&channel=whatsapp`) arrives as an array. The controller turns it into `''`, so it gets a 400 instead of being passed through.
+
+Decisions / for owner review:
+
+- **No authentication.** The backlog calls this the "admin preview API", but the app has no auth layer; all existing `/api/v1` routes are public. These routes only render public schedule data and can't send anything. If they should be private, that's a new item (e.g. a shared-secret header).
+- `sendDay` tells you whether the job would actually send that day (`false` on Shabbos/Yom Tov). The preview still renders.
+- No schema, config or dependency changes.
+
+`npm run test:ci` → 22 suites, 255 tests passing.
+
+Next up: E2 (read-only send log route). It needs a `selectSendLogByDate(date)` model function, since `selectSendLog` needs program/channel/mode.
