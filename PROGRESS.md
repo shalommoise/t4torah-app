@@ -291,3 +291,22 @@ Decisions / for owner review:
 `npm run test:ci` → 23 suites, 270 tests passing.
 
 Next up: F1 (docs: `docs/SENDING.md`, `API_ROUTES.md`, README).
+
+## 2026-09-30 — run: F1 (Claude, local, owner-requested single item)
+
+Completed 1 item:
+
+- **F1 Docs.**
+  - New `docs/SENDING.md`: architecture (pipeline + file map), content rules (no links, WhatsApp formatting stripped, R2 special date in subject), config table, dry-run vs live (two-switch rule), previewing (API + outbox), running the job (flags, output, exit codes), idempotency/`send_log` (incl. "run only the CREATE TABLE on an existing DB"), a cron example for 05:00 London (`CRON_TZ=Europe/London`, PATH note, log outside the repo), and an 8-step checklist for plugging in a real provider.
+  - `API_ROUTES.md`: new "Sends" section for `/sends/preview`, `/sends/preview.html`, `/sends/log`. The "All routes are GET only" line is still true.
+  - `README.md`: one new line in "Features required" pointing to `docs/SENDING.md`. The rest of the README (the owner's planning notes) is unchanged.
+- Every behaviour in the doc was checked against the current code, including R2–R4 from `1ea71a4`.
+
+For owner review:
+
+- **Provider checklist step 4 (audience model):** `DailyMessage` has no recipients. The real integration will need to decide how lists/segments map to programs. This is flagged as a decision, not built.
+- No code, schema, config or dependency changes.
+
+`npm run test:ci` → 23 suites, 270 tests passing.
+
+Next up: F2 (tests for existing untested controllers), then F3 (final review pass).
