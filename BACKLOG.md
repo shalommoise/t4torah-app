@@ -20,39 +20,37 @@ Work top to bottom. Read CLAUDE.md first.
   text), and any link field from the `DailyMessage` model. Leave the existing
   `SefariaUtils/` folder alone (it's pre-branch code). Update tests; `npm run test:ci` must pass.
   Note the reversal of A4 in PROGRESS.md.
-- [x] **R2 Special date in subject line** — owner decision (2026-09-29): append `| <special_date>` to the subject when present (links stripped), e.g. `Time4Mishna – Monday 28 Sep | 17 Tishrei | Chol HaMoed Sukkos`.
-- [x] **R3 Strip WhatsApp formatting characters** — owner decision (2026-09-29): remove `*`, `_`, `~` and backticks from DB text in the WhatsApp renderer so it can't break message formatting.
-- [x] **R4 URLs in notices** — owner decision (2026-09-29): keep silently stripping URLs from `special_date` / `additional_notice` for now. No code change.
+- [ ] **R2 Shared strict date parser** — one helper (e.g. `src/utils/dateUtils.js`) that accepts only real `YYYY-MM-DD` calendar dates and returns a UTC date (no rollover: `2026-02-30` and `2026-99-99` are rejected). Use it in `dailyContentService.js`, `render/dailyMessage.js`, `render/dailySections.js` and `render/subjectLine.js`, and later in D3/E1. Tests for leap years, month ends and malformed input. (From Codex review.)
+- [ ] **R3 Notice link policy: drop + warn** — owner decision. Replace URL stripping in `render/dailySections.js` with detection: if `additional_notice` (or `special_date`) contains anything link-like (http/https/ftp/mailto, `www.`, bare domains like `example.org`, email addresses, phone numbers), omit that notice entirely from email and WhatsApp and return a warning (e.g. `warnings: ['additional_notice omitted: contains link-like text']`) alongside the rendered output, so D1's report and E1's preview can show it. The day's message still renders. Tests for each link type plus normal Hebrew/English notices that must not be flagged (e.g. `Perek 3:4`, dates, times). (From Codex review.)
 
 ## B. Rendering
 
 - [x] **B1 Message model** — define (JSDoc) the `DailyMessage` shape: `{ date, program: 'time4mishna'|'time4nach'|'combined', email: { subject, html, text }, whatsapp: { text } }`.
 - [x] **B2 Email renderer** — `src/services/render/emailRenderer.js`: HTML + plain-text email from daily content. Template in `src/templates/dailyEmail.html` with simple `{{token}}` replacement (no templating dependency). Inline CSS, mobile-friendly, Hebrew date shown RTL (`dir="rtl"` on that element), special_date / additional_notice shown when present. Snapshot or string-contains tests.
-- [x] **R1 Remove Sefaria links** — *(duplicate of R1 above; done in `02c76ac`, verified 2026-09-29)* — owner decision: daily messages contain no external links. Delete `src/services/sefariaLinkService.js` and its tests. Remove all link output from `emailRenderer.js` and `src/templates/dailyEmail.html` (including the "Learn on Sefaria" text), and any link field from the `DailyMessage` model. Leave the existing `SefariaUtils/` folder alone (pre-branch code). Update tests; `npm run test:ci` must pass. Note the reversal of A4 in PROGRESS.md.
 - [x] **B3 WhatsApp renderer** — `src/services/render/whatsappRenderer.js`: WhatsApp-formatted text (`*bold*`, line breaks, no links). Keep under 1,000 characters; test the limit.
 - [x] **B4 Subject lines** — deterministic subject format, e.g. `Time4Mishna – Monday 28 Sep | 26 Tishrei`. Put the format in one place so it's easy to change.
 
 ## C. Sending (dry-run only)
 
 - [x] **C1 Sender interface** — `src/services/senders/index.js`: documented interface `{ name, channel: 'email'|'whatsapp', send(message) → Promise<{ ok, id?, error? }> }`, plus `getSenders(config)` factory.
-- [x] **C2 Console + file senders** — `consoleSender` (logs a summary) and `fileSender` (writes `outbox/<date>/<channel>-<program>.{html,txt}`; `outbox/` is gitignored). These are the defaults.
-- [x] **C3 Live-mode stubs** — `emailProviderSender` and `whatsappProviderSender` stubs that throw `Not implemented: provider not chosen` and are only selectable when `SEND_MODE=live`. Tests prove dry-run is the default and live mode without a provider fails loudly.
-- [x] **C4 Config** — `src/config/send.js` reading `SEND_MODE` (`dry-run` default), `SEND_CHANNELS` (`email,whatsapp`), `SEND_PROGRAMS`, `OUTBOX_DIR`. Add placeholders to a new `.env.example` (create it; never touch `.env`).
+- [ ] **C2 Console + file senders** — `consoleSender` (logs a summary) and `fileSender` (writes `outbox/<date>/<channel>-<program>.{html,txt}`; `outbox/` is gitignored). These are the defaults.
+- [ ] **C3 Live-mode stubs** — `emailProviderSender` and `whatsappProviderSender` stubs that throw `Not implemented: provider not chosen` and are only selectable when `SEND_MODE=live`. Tests prove dry-run is the default and live mode without a provider fails loudly. Also make `getSenders` fail closed: if a requested channel has no configured sender, throw (don't return an empty list).
+- [ ] **C4 Config** — `src/config/send.js` reading `SEND_MODE` (`dry-run` default), `SEND_CHANNELS` (`email,whatsapp`), `SEND_PROGRAMS`, `OUTBOX_DIR`. Add placeholders to a new `.env.example` (create it; never touch `.env`).
 
 ## D. Orchestration
 
-- [x] **D1 Dispatch service** — `src/services/dailySendService.js`: `runDailySend({ date, dryRun, channels })` → content → send-day rules → render → send via each sender → returns a result report (per channel/program: ok/error). One sender failing must not stop the others. Tests with mocked content + senders.
-- [x] **D2 Idempotency / send log** — add a `send_log` table to `db/setup.sql` (date, program, channel, status, provider_message_id, created_at) and a model (`insertSendLog`, `selectSendLog(date, program, channel)`). Dispatch skips a channel/program already logged `sent` for that date unless `force`. Tests mock the model. Note the schema addition in PROGRESS.md.
-- [x] **D3 CLI job** — `jobs/dailySend.js` + npm script `send:daily`: flags `--date=YYYY-MM-DD` (default: today in Europe/London), `--dry-run` (default true), `--channel=email|whatsapp`, `--force`. Exit code non-zero on any failure. Closes the DB pool on exit. Test the argument parsing as a pure function.
-- [x] **D4 Send-time helper** — Europe/London "today"/"tomorrow" date helper (handles BST/GMT without a new dependency, via `Intl.DateTimeFormat`). Tested across the late-October clock change.
+- [ ] **D1 Dispatch service** — `src/services/dailySendService.js`: `runDailySend({ date, dryRun, channels })` → content → send-day rules → render → send via each sender → returns a result report (per channel/program: ok/error). One sender failing must not stop the others. Tests with mocked content + senders.
+- [ ] **D2 Idempotency / send log** — add a `send_log` table to `db/setup.sql` (date, program, channel, status, provider_message_id, created_at) and a model (`insertSendLog`, `selectSendLog(date, program, channel)`). Dispatch skips a channel/program already logged `sent` for that date unless `force`. Add a `UNIQUE (send_date, program, channel)` constraint and claim before sending: insert a `claimed` row first (duplicate-key = another job already has it → skip), then update to `sent`/`failed`, so two concurrent jobs can't double-send. A `failed` row may be retried; `force` overrides. Tests mock the model. Note the schema addition in PROGRESS.md.
+- [ ] **D3 CLI job** — `jobs/dailySend.js` + npm script `send:daily`: flags `--date=YYYY-MM-DD` (default: today in Europe/London), `--dry-run` (default true), `--channel=email|whatsapp`, `--force`. Exit code non-zero on any failure. Closes the DB pool on exit. Test the argument parsing as a pure function.
+- [ ] **D4 Send-time helper** — Europe/London "today"/"tomorrow" date helper (handles BST/GMT without a new dependency, via `Intl.DateTimeFormat`). Tested across the late-October clock change.
 
 ## E. Admin preview API
 
-- [x] **E1 Preview routes** — `GET /api/v1/sends/preview?date=YYYY-MM-DD&channel=email|whatsapp&program=...` returns rendered content as JSON; `GET /api/v1/sends/preview.html?date=...` returns the email HTML directly for viewing in a browser. 400 on bad date, 404 when no date row. Router → controller → service pattern; supertest tests with mocked service.
-- [x] **E2 Send log route** — `GET /api/v1/sends/log?date=...` (read-only). Tests.
+- [ ] **E1 Preview routes** — `GET /api/v1/sends/preview?date=YYYY-MM-DD&channel=email|whatsapp&program=...` returns rendered content as JSON; `GET /api/v1/sends/preview.html?date=...` returns the email HTML directly for viewing in a browser. 400 on bad date, 404 when no date row. Router → controller → service pattern; supertest tests with mocked service.
+- [ ] **E2 Send log route** — `GET /api/v1/sends/log?date=...` (read-only). Tests.
 
 ## F. Docs & hygiene
 
-- [x] **F1 Docs** — `docs/SENDING.md`: architecture, config, how to preview, how to run the job via cron (e.g. `crontab` line for 5am London), and a checklist for plugging in a real provider later. Update `API_ROUTES.md` for the new routes and README features list.
-- [x] **F2 Tests for existing untested controllers** — add mocked supertest coverage for dates (`/dates`, `/dates/:id/full`), tanach, time4mishna and time4nach routes, including 400/404 cases.
-- [x] **F3 Final review pass** — read the whole diff vs `master`, remove dead code/console noise, make sure `npm run test:ci` passes, and write a PROGRESS.md summary listing: what was built, schema changes, open decisions for the owner, and suggested next steps.
+- [ ] **F1 Docs** — `docs/SENDING.md`: architecture, config, how to preview, how to run the job via cron (e.g. `crontab` line for 5am London), and a checklist for plugging in a real provider later. Update `API_ROUTES.md` for the new routes and README features list.
+- [ ] **F2 Tests for existing untested controllers** — add mocked supertest coverage for dates (`/dates`, `/dates/:id/full`), tanach, time4mishna and time4nach routes, including 400/404 cases.
+- [ ] **F3 Final review pass** — read the whole diff vs `master`, remove dead code/console noise, make sure `npm run test:ci` passes, and write a PROGRESS.md summary listing: what was built, schema changes, open decisions for the owner, and suggested next steps.
