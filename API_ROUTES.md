@@ -112,19 +112,21 @@ All routes are `GET` only.
 
 Daily send automation. Previews never send anything or write to `send_log`. See [docs/SENDING.md](docs/SENDING.md).
 
+**Auth:** every `/sends/*` route needs `Authorization: Bearer <SENDS_ADMIN_TOKEN>`. Missing or wrong token → `401`; `SENDS_ADMIN_TOKEN` unset or empty on the server → `503` (the routes never fall back to open access).
+
 - `GET /sends/preview`
   - Returns the rendered message for a date as JSON: `{ date, program, sendDay, email?: { subject, html, text }, whatsapp?: { text } }`.
   - Query params: `date` (required, `YYYY-MM-DD`), `program` (`time4mishna` default, `time4nach`, `combined`), `channel` (`email` or `whatsapp`; both when omitted)
   - `sendDay` is `false` when the job would skip the date (Shabbos/Yom Tov).
   - `400` for a bad date, program or channel; `404` when the date isn't in `dates_table`.
-  - Example: `curl "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&program=time4nach&channel=whatsapp"`
+  - Example: `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&program=time4nach&channel=whatsapp"`
 - `GET /sends/preview.html`
   - Returns the email HTML directly (`text/html`), for viewing in a browser.
   - Query params: `date` (required), `program`
   - `400` / `404` as above (as JSON).
-  - Example: `curl "http://localhost:3000/api/v1/sends/preview.html?date=2026-09-28&program=combined" --output preview.html`
+  - Example: `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/api/v1/sends/preview.html?date=2026-09-28&program=combined" --output preview.html`
 - `GET /sends/log`
   - Read-only send log for a date: `{ date, entries: [{ id, program, channel, mode, status, attempts, providerMessageId, createdAt, updatedAt }] }`, one entry per program/channel/mode, oldest first. `status` is `claimed` (in progress or interrupted), `sent` or `failed`. Empty `entries` when nothing has been sent.
   - Query params: `date` (required, `YYYY-MM-DD`)
   - `400` for a bad date.
-  - Example: `curl "http://localhost:3000/api/v1/sends/log?date=2026-09-28"`
+  - Example: `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/api/v1/sends/log?date=2026-09-28"`

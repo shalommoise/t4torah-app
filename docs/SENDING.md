@@ -34,7 +34,7 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 | Config | `src/config/send.js` | `getSendConfig(env)`. |
 | Send log | `src/models/sendLogModel.js`, `send_log` table | Stops a program/channel from going out twice on the same date. |
 | London dates | `src/utils/londonDate.js` | `londonToday`, `londonTomorrow`, `addDays`; handles BST/GMT. |
-| Preview API | `src/routes/sendsRouter.js` → `src/controllers/sendsController.js` → `sendPreviewService.js` / `sendLogService.js` | See [API_ROUTES.md](../API_ROUTES.md#sends). |
+| Preview API | `src/routes/sendsRouter.js` (bearer token: `src/middleware/requireSendsAdminToken.js`) → `src/controllers/sendsController.js` → `sendPreviewService.js` / `sendLogService.js` | See [API_ROUTES.md](../API_ROUTES.md#sends). |
 
 ### Content rules
 
@@ -59,6 +59,7 @@ Set these in `.env` (see [`.env.example`](../.env.example)). Unset or blank valu
 | `SEND_CHANNELS` | `email,whatsapp` | comma-separated `email`, `whatsapp` |
 | `SEND_PROGRAMS` | `time4mishna,time4nach` | comma-separated `time4mishna`, `time4nach`, `combined` |
 | `OUTBOX_DIR` | `outbox` | folder for dry-run files (gitignored); relative to the working directory |
+| `SENDS_ADMIN_TOKEN` | *(unset → 503)* | bearer token for `/api/v1/sends/*` (API server only, not the job) |
 
 The job also needs the usual `DATABASE_*` variables.
 
@@ -72,20 +73,24 @@ The job also needs the usual `DATABASE_*` variables.
 
 ## Previewing
 
+The preview and log routes need `SENDS_ADMIN_TOKEN` set on the server (see `.env.example`) and the same value sent as a bearer token. Without the variable they return `503`; with a missing or wrong token, `401`.
+
 With the API running (`npm start` or `npm run dev`):
 
 ```sh
+AUTH="Authorization: Bearer $SENDS_ADMIN_TOKEN"
+
 # Rendered email + WhatsApp as JSON (program defaults to time4mishna)
-curl "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&program=time4nach"
+curl -H "$AUTH" "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&program=time4nach"
 
 # Just one channel
-curl "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&channel=whatsapp"
+curl -H "$AUTH" "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&channel=whatsapp"
 
-# The email itself: open in a browser
-open "http://localhost:3000/api/v1/sends/preview.html?date=2026-09-28&program=combined"
+# The email itself: save it, then open the file in a browser
+curl -H "$AUTH" "http://localhost:3000/api/v1/sends/preview.html?date=2026-09-28&program=combined" --output preview.html
 
 # What has been sent for a date
-curl "http://localhost:3000/api/v1/sends/log?date=2026-09-28"
+curl -H "$AUTH" "http://localhost:3000/api/v1/sends/log?date=2026-09-28"
 ```
 
 The preview renders exactly what the job would send. `sendDay: false` means the job would skip that date (Shabbos/Yom Tov). Previews never send anything or write to `send_log`.
