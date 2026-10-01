@@ -388,3 +388,36 @@ Also fixed during setup/runs: the `.gitignore` line merged by the setup commit (
 5. Optional follow-ups: stricter numeric id validation; a `mode` filter on `/sends/log`; auth on `/sends/*`.
 
 **All backlog items are `[x]` (none `[!]`). Per CLAUDE.md step 7, unattended runs should make no further changes until the owner adds new items.**
+
+## 2026-10-01 — run: G1–G3 (Claude, local)
+
+**Backlog note.** An earlier pass today found no section G: commit `9488821` had un-ticked C2–F3, deleted R2–R4 and reused the IDs R2/R3 for new work. Nothing was changed then. The owner's `0de9726` restored the backlog to `0e608c7` and added the real G1–G6. This run checked that `0de9726` only adds section G before starting.
+
+Conflict check (per the run instructions): G1 tightens A2; G2 keeps `mode` in the unique key, consistent with the D2 per-mode decision; G3 answers the open auth question from E1. None conflicts with an earlier owner decision, so nothing is `[!]`.
+
+Completed 3 items:
+
+- **G1 Fail-closed send rules** (`d15c024`). `shouldSendOn` now sends only when `day_of_week` is `Sunday`…`Friday` (the values `controllers/dates/hebDate.js` writes) **and** `is_yom_tov` is exactly `0`/`false`. A new `getCalendarRowProblem(row)` reports a missing row, an unrecognised `day_of_week` (null, `Saturday`, lower case…) or an unrecognised `is_yom_tov` (null, missing, `'0'`, `2`…). `runDailySend` returns `status: 'invalid-calendar-row'`, `ok: false`, `reason: 'invalid calendar row: …'` without building senders or touching `send_log`, even with `--force`, so the CLI exits 1. Shabbos/Yom Tov with recognised values are still a successful skip. The E1 preview's `sendDay` is `false` for an invalid row. All existing send-rule tests pass unchanged (only their import line was widened).
+- **G2 Atomic send claim** (`9d099b2`).
+  - **Schema change (`db/setup.sql`, not run):** `send_log` is now one row per `(send_date, program, channel, mode)` with `UNIQUE KEY send_log_once`, `status ENUM('claimed','sent','failed')`, `attempts INT DEFAULT 1`, `provider_message_id`, `created_at`, `updated_at` (`ON UPDATE CURRENT_TIMESTAMP`). It replaces the D2 definition, which was never deployed.
+  - **Model:** `insertSendLog` is replaced by `claimSendLog` (plain `INSERT` → `false` on `ER_DUP_ENTRY`, other errors rethrown; no `INSERT IGNORE`), `reclaimFailedSendLog` (`UPDATE … WHERE … AND status='failed'`, true only if `affectedRows === 1`), `forceClaimSendLog` (`INSERT … ON DUPLICATE KEY UPDATE`, only for `--force`), `finishSendLog` (sets `sent`/`failed` only `WHERE status='claimed'`). `selectSendLog` now takes the key object.
+  - **Dispatch:** claim → send → finish. Already `sent` → skipped (ok). Still `claimed` → not sent, `error: "needs attention: possibly sent (…); use --force to resend"` (exit 1). Any claim error blocks that channel. A finish error, or a finish that finds the row no longer `claimed`, sets `logError` (run not ok).
+  - E2 `/sends/log` entries gain `attempts` and `updatedAt`. `docs/SENDING.md` has a new idempotency section with a status × `--force` table; `API_ROUTES.md` and the CLI `--help` are updated. Live stubs have a `TODO(provider)` JSDoc for provider idempotency keys.
+  - **Tests:** the D2 tests for the old read-then-insert flow were **rewritten, not dropped**. Each scenario maps to a claim-flow test (records each key, skip-if-sent, retry-if-failed, force, failed outcome, mode in key, log error blocks channel, write error, id truncation, Shabbos/missing date untouched), plus new ones: claim-before-send order, a stuck `claimed` row needs attention, force over `sent`/`claimed`/`failed`, a lost row, and finish-not-claimed. Concurrency: an in-memory fake with MySQL's unique-key semantics runs two `runDailySend` calls in parallel. Each program/channel is sent exactly once, and the other run reports it as needing attention. Also covered: a second run after a completed run skips everything, and a failed run is retried with `attempts: 2`. The concurrency test passed 10/10 runs, and **mutation-checked**: making the service ignore the claim result makes it fail. Model tests now cover the claim/reclaim/force/finish SQL.
+- **G3 Protect `/api/v1/sends/*`** (`3340627`). New `src/middleware/requireSendsAdminToken.js`, mounted with `sendsRouter.use(...)`, so it covers every `/sends/*` path including unknown ones.
+  - Fails closed: `SENDS_ADMIN_TOKEN` unset, empty or whitespace → `503`. A missing, malformed or wrong bearer token → `401` with `WWW-Authenticate: Bearer`.
+  - Compares SHA-256 digests with `crypto.timingSafeEqual`, so buffers are always the same length and the token length doesn't leak.
+  - The token is read per request, so it can be rotated without a restart. The scheme is case-insensitive; the token is exact.
+  - `SENDS_ADMIN_TOKEN=` placeholder (empty) added to `.env.example` with a generation hint; `.env` not touched.
+  - Existing `sendsRoute.test.js` requests now send the token; no assertions changed. New `sendsAuth.test.js` covers 503 (unset/empty/whitespace), 401 (10 header variants × 3 routes), 200, unknown paths, other API routes unaffected, and token rotation.
+  - **CORS (owner decision, not changed):** `src/app.js` still has global `app.use(cors())` (any origin). It doesn't weaken the token check (no cookies; the header is required), but browsers on any origin can call the routes if they have the token. Whether to restrict CORS for `/sends/*` or globally is left to the owner, as G3 asked.
+
+For owner review:
+
+- **Deploying G2's schema:** if any `send_log` from the D2 version was ever created, drop it before creating the new one. `npm run test:integration` against a real MySQL with the new table is still to do (G6 lists it).
+- A run that finds a row still `claimed` (e.g. a crashed job) exits 1 every day until someone checks the provider and reruns with `--force` for that date.
+- The browser can't add the bearer header, so `docs/SENDING.md` now says to save `preview.html` with curl and open the file.
+
+`npm run test:ci` → 28 suites, 403 tests passing.
+
+Next up: G4 (subject sanitising), G5 (one strict date parser), G6 (docs + hygiene + section G summary).
