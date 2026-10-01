@@ -23,7 +23,7 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 | Piece | File | Notes |
 |---|---|---|
 | Content | `src/services/dailyContentService.js` | Looks up the date in `dates_table`, then the Time4Mishna/Time4Nach schedule rows. |
-| Send-day rules | `src/services/sendRules.js` | Skips when `day_of_week` is `Shabbos` or `is_yom_tov` is set. Chol HaMoed and Fridays send. |
+| Send-day rules | `src/services/sendRules.js` | Fails closed: sends only when `day_of_week` is Sunday–Friday and `is_yom_tov` is explicitly `0`/`false`. Shabbos/Yom Tov skip; a missing or unrecognised value is an error. Chol HaMoed and Fridays send. |
 | Labels | `src/services/shiurLabelService.js` | `Brachos 1:1–1:4`, `Brachos 9:5 – Peah 1:3`, `Tehillim 42`, `Chazara`. |
 | Shared sections | `src/services/render/dailySections.js` | Per-program sections, date formatting, `stripLinks`. |
 | Message model | `src/services/render/dailyMessage.js` | `DailyMessage = { date, program, email: { subject, html, text }, whatsapp: { text } }`. |
@@ -123,7 +123,7 @@ The job prints one line per program/channel/sender, e.g.
 | Code | Meaning |
 |---|---|
 | `0` | Everything sent (or already sent), or the date is Shabbos/Yom Tov (skipped) |
-| `1` | Any send failed, a `send_log` read/write failed, or the date isn't in `dates_table` |
+| `1` | Any send failed, a `send_log` read/write failed, the date isn't in `dates_table`, or its row has a missing/unrecognised `day_of_week` or `is_yom_tov` (`invalid-calendar-row`) |
 | `2` | Bad flags, invalid `SEND_*` config, or an invalid date |
 
 A date missing from `dates_table` is a failure on purpose: it means the calendar hasn't been seeded far enough ahead.

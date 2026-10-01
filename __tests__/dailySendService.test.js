@@ -225,6 +225,38 @@ describe('runDailySend', () => {
   });
 });
 
+describe('runDailySend invalid calendar rows (G1)', () => {
+  test.each([
+    [{ day_of_week: null }, 'invalid calendar row: unrecognised day_of_week: null'],
+    [{ day_of_week: 'Saturday' }, 'invalid calendar row: unrecognised day_of_week: "Saturday"'],
+    [{ is_yom_tov: null }, 'invalid calendar row: unrecognised is_yom_tov: null'],
+    [{ day_of_week: null, is_yom_tov: null }, 'invalid calendar row: unrecognised day_of_week: null'],
+  ])('%p is reported as an error, not a skip, and nothing is sent', async (overrides, reason) => {
+    getDailyContent.mockResolvedValue(content({ date: dateRow(overrides) }));
+    getSenders.mockReturnValue([fakeSender('x', 'email')]);
+
+    await expect(runDailySend({ date: '2026-09-28' })).resolves.toEqual({
+      date: '2026-09-28',
+      mode: 'dry-run',
+      status: 'invalid-calendar-row',
+      ok: false,
+      reason,
+      results: [],
+    });
+    expect(getSenders).not.toHaveBeenCalled();
+    expect(selectSendLog).not.toHaveBeenCalled();
+    expect(insertSendLog).not.toHaveBeenCalled();
+  });
+
+  test('an invalid row is an error even with force', async () => {
+    getDailyContent.mockResolvedValue(content({ date: dateRow({ is_yom_tov: undefined }) }));
+    getSenders.mockReturnValue([fakeSender('x', 'email')]);
+    const report = await runDailySend({ date: '2026-09-28', force: true });
+    expect(report).toMatchObject({ status: 'invalid-calendar-row', ok: false });
+    expect(getSenders).not.toHaveBeenCalled();
+  });
+});
+
 describe('runDailySend send log (idempotency)', () => {
   const sentRow = { status: 'sent' };
 

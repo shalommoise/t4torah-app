@@ -1,5 +1,5 @@
 const { getDailyContent } = require('./dailyContentService');
-const { shouldSendOn } = require('./sendRules');
+const { shouldSendOn, getCalendarRowProblem } = require('./sendRules');
 const { getSenders } = require('./senders');
 const { getSendConfig } = require('../config/send');
 const { createDailyMessage } = require('./render/dailyMessage');
@@ -24,9 +24,9 @@ const { insertSendLog, selectSendLog } = require('../models/sendLogModel');
  * @typedef {object} SendReport
  * @property {string} date
  * @property {'dry-run'|'live'} mode
- * @property {'sent'|'partial'|'failed'|'skipped'|'no-date'} status
- * @property {boolean} ok `false` if anything failed or the date is missing.
- * @property {string} [reason] Why nothing was sent (`skipped` / `no-date`).
+ * @property {'sent'|'partial'|'failed'|'skipped'|'no-date'|'invalid-calendar-row'} status
+ * @property {boolean} ok `false` if anything failed, the date is missing or its row is invalid.
+ * @property {string} [reason] Why nothing was sent (`skipped` / `no-date` / `invalid-calendar-row`).
  * @property {SendReportEntry[]} results One entry per program × sender.
  */
 
@@ -150,6 +150,16 @@ const runDailySend = async ({
   const content = await getDailyContent(date);
   if (!content) {
     return { ...report, status: 'no-date', ok: false, reason: `${date} is not in dates_table`, results: [] };
+  }
+  const calendarProblem = getCalendarRowProblem(content.date);
+  if (calendarProblem) {
+    return {
+      ...report,
+      status: 'invalid-calendar-row',
+      ok: false,
+      reason: `invalid calendar row: ${calendarProblem}`,
+      results: [],
+    };
   }
   if (!shouldSendOn(content.date)) {
     return { ...report, status: 'skipped', ok: true, reason: 'No send on Shabbos or Yom Tov', results: [] };
