@@ -14,11 +14,17 @@ const createStubSender = (name, channel) => ({
 });
 
 /**
+ * TODO(provider): pass a provider idempotency key (e.g. `${date}:${program}:email`)
+ * if the provider supports one, so a resend after an interrupted run can't duplicate.
+ *
  * @returns {import('./index').Sender}
  */
 const createEmailProviderSender = () => createStubSender('emailProviderSender', 'email');
 
 /**
+ * TODO(provider): pass a provider idempotency key (e.g. `${date}:${program}:whatsapp`)
+ * if the BSP supports one, so a resend after an interrupted run can't duplicate.
+ *
  * @returns {import('./index').Sender}
  */
 const createWhatsappProviderSender = () => createStubSender('whatsappProviderSender', 'whatsapp');

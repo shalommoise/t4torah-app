@@ -6,7 +6,13 @@ const { createDailyMessage } = require('./render/dailyMessage');
 const { renderEmail } = require('./render/emailRenderer');
 const { renderWhatsapp } = require('./render/whatsappRenderer');
 const { buildSubject } = require('./render/subjectLine');
-const { insertSendLog, selectSendLog } = require('../models/sendLogModel');
+const {
+  claimSendLog,
+  reclaimFailedSendLog,
+  forceClaimSendLog,
+  finishSendLog,
+  selectSendLog,
+} = require('../models/sendLogModel');
 
 /**
  * @typedef {object} SendReportEntry
@@ -16,8 +22,8 @@ const { insertSendLog, selectSendLog } = require('../models/sendLogModel');
  * @property {boolean} ok
  * @property {string} [id]
  * @property {string} [error]
- * @property {boolean} [skipped] Already logged `sent` for this date; not sent again.
- * @property {string} [logError] Sent, but recording it in send_log failed.
+ * @property {boolean} [skipped] Already `sent` for this date and mode; not sent again.
+ * @property {string} [logError] Sent, but recording the outcome in send_log failed.
  */
 
 /**
@@ -66,46 +72,73 @@ const sendWith = async (sender, message) => {
   }
 };
 
+const NEEDS_ATTENTION =
+  'needs attention: possibly sent (send_log row is still claimed by another run or an interrupted one); use --force to resend';
+
 /**
- * Sends one program's message on one channel, unless send_log already has a
- * `sent` row for it (and `force` is off), then records the attempt.
- * A send_log read failure blocks the send, to avoid sending twice.
+ * Claims a send_log key so only one run sends it.
+ *
+ * @returns {Promise<{ claimed: true } | { claimed: false, status: string|null }>}
+ *   When not claimed, `status` is the existing row's status.
+ */
+const claimKey = async (key, force) => {
+  if (force) {
+    return { claimed: await forceClaimSendLog(key) };
+  }
+  if (await claimSendLog(key)) {
+    return { claimed: true };
+  }
+  if (await reclaimFailedSendLog(key)) {
+    return { claimed: true };
+  }
+  const [row] = await selectSendLog(key);
+  return { claimed: false, status: row ? row.status : null };
+};
+
+/**
+ * Sends one program's message on one channel, only after atomically claiming
+ * its send_log row (see claimKey), then records `sent` or `failed`.
+ * - Already `sent`: skipped (ok).
+ * - Still `claimed` (another run in progress, or a crash mid-send): not
+ *   resent; reported as needing attention unless `force`.
+ * - Any send_log error before sending blocks the send, to avoid sending twice.
  */
 const sendChannel = async ({ date, program, channel, mode, force, message, channelSenders }) => {
   const base = (sender) => ({ program, channel, sender: sender.name });
+  const failAll = (error) => channelSenders.map((sender) => ({ ...base(sender), ok: false, error }));
+  const key = { date, program, channel, mode };
 
-  if (!force) {
-    let rows;
-    try {
-      rows = await selectSendLog(date, program, channel, mode);
-    } catch (error) {
-      return channelSenders.map((sender) => ({
-        ...base(sender),
-        ok: false,
-        error: `Send log check failed: ${errorMessage(error)}`,
-      }));
-    }
-    if (rows.some((row) => row.status === 'sent')) {
+  let claim;
+  try {
+    claim = await claimKey(key, force);
+  } catch (error) {
+    return failAll(`Send log claim failed: ${errorMessage(error)}`);
+  }
+  if (!claim.claimed) {
+    if (claim.status === 'sent') {
       return channelSenders.map((sender) => ({ ...base(sender), ok: true, skipped: true }));
     }
+    if (claim.status === 'claimed') {
+      return failAll(NEEDS_ATTENTION);
+    }
+    return failAll(`Send log claim failed: unexpected row status ${JSON.stringify(claim.status)}`);
   }
 
   const entries = await Promise.all(channelSenders.map((sender) => sendWith(sender, message)));
   const ids = entries.filter((entry) => entry.ok && entry.id !== undefined).map((entry) => String(entry.id));
+  let logError;
   try {
-    await insertSendLog({
-      date,
-      program,
-      channel,
-      mode,
+    const finished = await finishSendLog(key, {
       status: entries.every((entry) => entry.ok) ? 'sent' : 'failed',
       providerMessageId: ids.length ? ids.join(', ').slice(0, PROVIDER_ID_MAX_LENGTH) : null,
     });
+    if (!finished) {
+      logError = 'Send log write failed: row was no longer claimed';
+    }
   } catch (error) {
-    const logError = `Send log write failed: ${errorMessage(error)}`;
-    return entries.map((entry) => ({ ...entry, logError }));
+    logError = `Send log write failed: ${errorMessage(error)}`;
   }
-  return entries;
+  return logError ? entries.map((entry) => ({ ...entry, logError })) : entries;
 };
 
 const isOk = (result) => result.ok && !result.logError;
@@ -121,7 +154,8 @@ const getStatus = (results) => {
 /**
  * Runs the daily send for one date: content → send-day rules → render → send
  * via every sender for each program. Each program/channel is sent at most once
- * per date and mode (tracked in send_log) unless `force` is set.
+ * per date and mode: a run must claim its send_log row first, so concurrent
+ * runs can't both send. `force` claims regardless of the row's status.
  *
  * Live senders are used only when `dryRun` is explicitly `false`.
  *
@@ -132,7 +166,7 @@ const getStatus = (results) => {
  * @param {('time4mishna'|'time4nach'|'combined')[]} [options.programs] Defaults to the send config default.
  * @param {string} [options.outboxDir] For the dry-run file sender.
  * @param {{ log: (line: string) => void }} [options.logger] For the dry-run console sender.
- * @param {boolean} [options.force=false] Send even if send_log already has a `sent` row.
+ * @param {boolean} [options.force=false] Claim and send even if send_log says `sent` or `claimed`.
  * @returns {Promise<SendReport>}
  */
 const runDailySend = async ({

@@ -45,6 +45,27 @@ describe('getSendLog', () => {
     expect(selectSendLogByDate).toHaveBeenCalledWith('2026-09-28');
   });
 
+  test('includes claim status, attempts and updatedAt (G2)', async () => {
+    const updatedAt = new Date('2026-09-28T04:01:00Z');
+    selectSendLogByDate.mockResolvedValue([
+      {
+        send_log_id: 4,
+        program: 'time4mishna',
+        channel: 'email',
+        mode: 'live',
+        status: 'claimed',
+        attempts: 2,
+        provider_message_id: null,
+        created_at: new Date('2026-09-27T04:00:00Z'),
+        updated_at: updatedAt,
+      },
+    ]);
+
+    const { entries } = await getSendLog({ date: '2026-09-28' });
+
+    expect(entries[0]).toMatchObject({ status: 'claimed', attempts: 2, updatedAt });
+  });
+
   test('returns an empty list for a date with no attempts', async () => {
     selectSendLogByDate.mockResolvedValue([]);
     await expect(getSendLog({ date: '2026-09-29' })).resolves.toEqual({ date: '2026-09-29', entries: [] });

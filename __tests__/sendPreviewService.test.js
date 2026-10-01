@@ -1,5 +1,5 @@
 const { getDailyContent } = require('../src/services/dailyContentService');
-const { insertSendLog, selectSendLog } = require('../src/models/sendLogModel');
+const sendLogModel = require('../src/models/sendLogModel');
 const { getSenders } = require('../src/services/senders');
 const { getSendPreview } = require('../src/services/sendPreviewService');
 
@@ -8,8 +8,12 @@ jest.mock('../src/services/dailyContentService', () => ({
 }));
 
 jest.mock('../src/models/sendLogModel', () => ({
-  insertSendLog: jest.fn(),
+  claimSendLog: jest.fn(),
+  reclaimFailedSendLog: jest.fn(),
+  forceClaimSendLog: jest.fn(),
+  finishSendLog: jest.fn(),
   selectSendLog: jest.fn(),
+  selectSendLogByDate: jest.fn(),
 }));
 
 jest.mock('../src/services/senders', () => ({
@@ -86,8 +90,7 @@ describe('getSendPreview', () => {
     getDailyContent.mockResolvedValue(content());
     await getSendPreview({ date: '2026-09-28' });
     expect(getSenders).not.toHaveBeenCalled();
-    expect(selectSendLog).not.toHaveBeenCalled();
-    expect(insertSendLog).not.toHaveBeenCalled();
+    Object.values(sendLogModel).forEach((fn) => expect(fn).not.toHaveBeenCalled());
   });
 
   test.each([

@@ -98,7 +98,7 @@ A dry-run of the job is also a preview: run it and open the files in `outbox/<da
 npm run send:daily                                  # today (Europe/London), dry-run
 npm run send:daily -- --date=2026-09-28             # a specific date
 npm run send:daily -- --channel=whatsapp            # one channel (comma-separate for several)
-npm run send:daily -- --force                       # send again even if send_log says sent
+npm run send:daily -- --force                       # send even if send_log says sent/claimed
 npm run send:daily -- --help
 ```
 
@@ -107,7 +107,7 @@ npm run send:daily -- --help
 | `--date=YYYY-MM-DD` | today in Europe/London | Date to send |
 | `--dry-run[=true\|false]` | `true` | `false` also needs `SEND_MODE=live` |
 | `--channel=email\|whatsapp` | `SEND_CHANNELS` | Overrides the channels |
-| `--force` | off | Ignores `send_log` "sent" rows |
+| `--force` | off | Sends even if `send_log` says `sent` or `claimed` |
 
 The job prints one line per program/channel/sender, e.g.
 
@@ -130,11 +130,26 @@ A date missing from `dates_table` is a failure on purpose: it means the calendar
 
 ### Idempotency (`send_log`)
 
-Each run records one row per date/program/channel/mode (`sent` or `failed`). A later run for the same date and mode skips anything already `sent`, and still sends anything that `failed`. `--force` sends regardless. Dry-run and live are tracked separately, so a dry-run never blocks a live send.
+`send_log` has one row per date/program/channel/mode (unique key), with `status` `claimed`, `sent` or `failed`, plus `attempts`. A run must **claim** the row before sending:
 
-If `send_log` can't be read, that channel is **not** sent (to avoid double-sending); use `--force` if you're sure.
+1. `INSERT` a `claimed` row. A duplicate key means another run already has it.
+2. Otherwise, if the row is `failed`, flip it to `claimed` (`UPDATE … WHERE status = 'failed'`; only one run can win, since `affectedRows` must be 1).
+3. Send, then set the row to `sent` or `failed`.
 
-The table is defined at the end of `db/setup.sql`. `setup.sql` drops and recreates the whole database, so on an existing database run only the `CREATE TABLE send_log …` statement.
+So two jobs running at once can't both send. What a run does with an existing row:
+
+| Row status | Without `--force` | With `--force` |
+|---|---|---|
+| none | claim and send | claim and send |
+| `failed` | retry (attempts + 1) | retry |
+| `sent` | skip (ok) | send again |
+| `claimed` | **not sent**; reported as `needs attention: possibly sent` (exit 1) | send again |
+
+A row stuck at `claimed` means a run was interrupted mid-send (or another run is still going). The message may or may not have gone out, so it is never resent automatically. Check with the provider, then use `--force` if it needs sending.
+
+Dry-run and live are tracked separately, so a dry-run never blocks a live send. Any `send_log` error before sending blocks that channel (to avoid double-sending). An error recording the outcome is reported (`logError`) and the run exits 1.
+
+The table is defined at the end of `db/setup.sql`. `setup.sql` drops and recreates the whole database, so on an existing database run only the `CREATE TABLE send_log …` statement (and drop any earlier `send_log` from before this change first).
 
 ### Cron (5am London)
 

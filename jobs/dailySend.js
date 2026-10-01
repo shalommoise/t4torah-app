@@ -15,7 +15,7 @@ const USAGE = `Usage: npm run send:daily -- [options]
   --date=YYYY-MM-DD           Date to send (default: today in Europe/London)
   --dry-run[=true|false]      Default true. --dry-run=false also needs SEND_MODE=live
   --channel=email|whatsapp    Only this channel (comma-separate for several; default: SEND_CHANNELS)
-  --force                     Send even if send_log already has a 'sent' row
+  --force                     Send even if send_log says 'sent' or 'claimed'
   --help                      Show this help`;
 
 const EXIT_OK = 0;

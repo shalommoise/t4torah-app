@@ -4,16 +4,27 @@ const path = require('path');
 const { getDailyContent } = require('../src/services/dailyContentService');
 const { getSenders } = require('../src/services/senders');
 const { runDailySend } = require('../src/services/dailySendService');
-const { insertSendLog, selectSendLog } = require('../src/models/sendLogModel');
+const {
+  claimSendLog,
+  reclaimFailedSendLog,
+  forceClaimSendLog,
+  finishSendLog,
+  selectSendLog,
+} = require('../src/models/sendLogModel');
 
 jest.mock('../src/services/dailyContentService', () => ({
   getDailyContent: jest.fn(),
 }));
 
 jest.mock('../src/models/sendLogModel', () => ({
-  insertSendLog: jest.fn(),
+  claimSendLog: jest.fn(),
+  reclaimFailedSendLog: jest.fn(),
+  forceClaimSendLog: jest.fn(),
+  finishSendLog: jest.fn(),
   selectSendLog: jest.fn(),
 }));
+
+const sendLogFns = () => [claimSendLog, reclaimFailedSendLog, forceClaimSendLog, finishSendLog, selectSendLog];
 
 jest.mock('../src/services/senders', () => ({
   ...jest.requireActual('../src/services/senders'),
@@ -59,8 +70,12 @@ const fakeSender = (name, channel, send) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Default: nothing logged yet, so every claim succeeds and every finish lands.
+  claimSendLog.mockResolvedValue(true);
+  reclaimFailedSendLog.mockResolvedValue(false);
+  forceClaimSendLog.mockResolvedValue(true);
+  finishSendLog.mockResolvedValue(true);
   selectSendLog.mockResolvedValue([]);
-  insertSendLog.mockResolvedValue({ insertId: 1 });
 });
 
 describe('runDailySend', () => {
@@ -244,8 +259,7 @@ describe('runDailySend invalid calendar rows (G1)', () => {
       results: [],
     });
     expect(getSenders).not.toHaveBeenCalled();
-    expect(selectSendLog).not.toHaveBeenCalled();
-    expect(insertSendLog).not.toHaveBeenCalled();
+    sendLogFns().forEach((fn) => expect(fn).not.toHaveBeenCalled());
   });
 
   test('an invalid row is an error even with force', async () => {
@@ -257,10 +271,13 @@ describe('runDailySend invalid calendar rows (G1)', () => {
   });
 });
 
-describe('runDailySend send log (idempotency)', () => {
-  const sentRow = { status: 'sent' };
+const NEEDS_ATTENTION =
+  'needs attention: possibly sent (send_log row is still claimed by another run or an interrupted one); use --force to resend';
 
-  test('checks and records each program/channel for the date and mode', async () => {
+const key = (program, channel, mode = 'dry-run') => ({ date: '2026-09-28', program, channel, mode });
+
+describe('runDailySend send claim (G2)', () => {
+  test('claims, sends, then finishes each program/channel for the date and mode', async () => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([
       fakeSender('console-email', 'email'),
@@ -268,44 +285,48 @@ describe('runDailySend send log (idempotency)', () => {
       fakeSender('fake-whatsapp', 'whatsapp'),
     ]);
 
-    await runDailySend({ date: '2026-09-28', programs: ['time4mishna'] });
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4mishna'] });
 
-    expect(selectSendLog.mock.calls).toEqual([
-      ['2026-09-28', 'time4mishna', 'email', 'dry-run'],
-      ['2026-09-28', 'time4mishna', 'whatsapp', 'dry-run'],
+    expect(report).toMatchObject({ status: 'sent', ok: true });
+    expect(claimSendLog.mock.calls).toEqual([[key('time4mishna', 'email')], [key('time4mishna', 'whatsapp')]]);
+    expect(finishSendLog.mock.calls).toEqual([
+      [key('time4mishna', 'email'), { status: 'sent', providerMessageId: 'console-email-time4mishna, file-email-time4mishna' }],
+      [key('time4mishna', 'whatsapp'), { status: 'sent', providerMessageId: 'fake-whatsapp-time4mishna' }],
     ]);
-    expect(insertSendLog.mock.calls).toEqual([
-      [
-        {
-          date: '2026-09-28',
-          program: 'time4mishna',
-          channel: 'email',
-          mode: 'dry-run',
-          status: 'sent',
-          providerMessageId: 'console-email-time4mishna, file-email-time4mishna',
-        },
-      ],
-      [
-        {
-          date: '2026-09-28',
-          program: 'time4mishna',
-          channel: 'whatsapp',
-          mode: 'dry-run',
-          status: 'sent',
-          providerMessageId: 'fake-whatsapp-time4mishna',
-        },
-      ],
-    ]);
+    expect(reclaimFailedSendLog).not.toHaveBeenCalled();
+    expect(forceClaimSendLog).not.toHaveBeenCalled();
   });
 
-  test('skips a program/channel already logged sent, still sending the rest', async () => {
+  test('claims before sending', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const order = [];
+    claimSendLog.mockImplementation(async () => {
+      order.push('claim');
+      return true;
+    });
+    finishSendLog.mockImplementation(async () => {
+      order.push('finish');
+      return true;
+    });
+    getSenders.mockReturnValue([
+      fakeSender('fake-email', 'email', async () => {
+        order.push('send');
+        return { ok: true, id: 'x' };
+      }),
+    ]);
+
+    await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(order).toEqual(['claim', 'send', 'finish']);
+  });
+
+  test('skips a program/channel already sent, still sending the rest', async () => {
     getDailyContent.mockResolvedValue(content());
     const email = fakeSender('fake-email', 'email');
     const whatsapp = fakeSender('fake-whatsapp', 'whatsapp');
     getSenders.mockReturnValue([email, whatsapp]);
-    selectSendLog.mockImplementation(async (_date, program, channel) =>
-      program === 'time4mishna' && channel === 'email' ? [{ status: 'failed' }, sentRow] : []
-    );
+    claimSendLog.mockImplementation(async (k) => !(k.program === 'time4mishna' && k.channel === 'email'));
+    selectSendLog.mockResolvedValue([{ status: 'sent' }]);
 
     const report = await runDailySend({ date: '2026-09-28' });
 
@@ -318,35 +339,71 @@ describe('runDailySend send log (idempotency)', () => {
     ]);
     expect(email.send).toHaveBeenCalledTimes(1);
     expect(email.send.mock.calls[0][0].program).toBe('time4nach');
-    expect(insertSendLog).toHaveBeenCalledTimes(3);
+    expect(finishSendLog).toHaveBeenCalledTimes(3);
   });
 
-  test('a previous failed attempt does not block a retry', async () => {
+  test('a failed row is retried via an atomic reclaim', async () => {
     getDailyContent.mockResolvedValue(content());
     const email = fakeSender('fake-email', 'email');
     getSenders.mockReturnValue([email]);
-    selectSendLog.mockResolvedValue([{ status: 'failed' }]);
+    claimSendLog.mockResolvedValue(false);
+    reclaimFailedSendLog.mockResolvedValue(true);
 
-    await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
 
+    expect(reclaimFailedSendLog).toHaveBeenCalledWith(key('time4nach', 'email'));
     expect(email.send).toHaveBeenCalledTimes(1);
+    expect(report).toMatchObject({ status: 'sent', ok: true });
   });
 
-  test('force sends again without reading the log, and still records', async () => {
+  test('a row left claimed is never auto-resent and needs attention', async () => {
     getDailyContent.mockResolvedValue(content());
     const email = fakeSender('fake-email', 'email');
     getSenders.mockReturnValue([email]);
-    selectSendLog.mockResolvedValue([sentRow]);
+    claimSendLog.mockResolvedValue(false);
+    reclaimFailedSendLog.mockResolvedValue(false);
+    selectSendLog.mockResolvedValue([{ status: 'claimed' }]);
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(email.send).not.toHaveBeenCalled();
+    expect(finishSendLog).not.toHaveBeenCalled();
+    expect(report).toMatchObject({ status: 'failed', ok: false });
+    expect(report.results).toEqual([
+      { program: 'time4nach', channel: 'email', sender: 'fake-email', ok: false, error: NEEDS_ATTENTION },
+    ]);
+  });
+
+  test('a claim that loses the row entirely is a failure, not a send', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const email = fakeSender('fake-email', 'email');
+    getSenders.mockReturnValue([email]);
+    claimSendLog.mockResolvedValue(false);
+    selectSendLog.mockResolvedValue([]);
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(email.send).not.toHaveBeenCalled();
+    expect(report.results[0]).toMatchObject({ ok: false, error: 'Send log claim failed: unexpected row status null' });
+  });
+
+  test.each([['sent'], ['claimed'], ['failed']])('force claims and sends regardless of a %s row', async (status) => {
+    getDailyContent.mockResolvedValue(content());
+    const email = fakeSender('fake-email', 'email');
+    getSenders.mockReturnValue([email]);
+    selectSendLog.mockResolvedValue([{ status }]);
 
     const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'], force: true });
 
-    expect(selectSendLog).not.toHaveBeenCalled();
+    expect(forceClaimSendLog).toHaveBeenCalledWith(key('time4nach', 'email'));
+    expect(claimSendLog).not.toHaveBeenCalled();
+    expect(reclaimFailedSendLog).not.toHaveBeenCalled();
     expect(email.send).toHaveBeenCalledTimes(1);
-    expect(insertSendLog).toHaveBeenCalledTimes(1);
+    expect(finishSendLog).toHaveBeenCalledTimes(1);
     expect(report.results[0]).not.toHaveProperty('skipped');
   });
 
-  test('logs failed when any sender on the channel fails', async () => {
+  test('records failed when any sender on the channel fails', async () => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([
       fakeSender('ok-email', 'email'),
@@ -357,29 +414,30 @@ describe('runDailySend send log (idempotency)', () => {
 
     await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
 
-    expect(insertSendLog).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'failed', providerMessageId: 'ok-email-time4nach' })
-    );
+    expect(finishSendLog).toHaveBeenCalledWith(key('time4nach', 'email'), {
+      status: 'failed',
+      providerMessageId: 'ok-email-time4nach',
+    });
   });
 
-  test('uses the mode in the log, so a dry-run does not block live', async () => {
+  test('uses the mode in the key, so a dry-run does not block live', async () => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([fakeSender('live-email', 'email')]);
 
     await runDailySend({ date: '2026-09-28', programs: ['time4nach'], dryRun: false });
 
-    expect(selectSendLog).toHaveBeenCalledWith('2026-09-28', 'time4nach', 'email', 'live');
-    expect(insertSendLog).toHaveBeenCalledWith(expect.objectContaining({ mode: 'live' }));
+    expect(claimSendLog).toHaveBeenCalledWith(key('time4nach', 'email', 'live'));
+    expect(finishSendLog).toHaveBeenCalledWith(key('time4nach', 'email', 'live'), expect.any(Object));
   });
 
-  test('a send log read failure blocks that channel only', async () => {
+  test('a send_log error while claiming blocks that channel only', async () => {
     getDailyContent.mockResolvedValue(content());
     const email = fakeSender('fake-email', 'email');
     const whatsapp = fakeSender('fake-whatsapp', 'whatsapp');
     getSenders.mockReturnValue([email, whatsapp]);
-    selectSendLog.mockImplementation(async (_date, _program, channel) => {
-      if (channel === 'email') throw new Error('connection refused');
-      return [];
+    claimSendLog.mockImplementation(async (k) => {
+      if (k.channel === 'email') throw new Error('connection refused');
+      return true;
     });
 
     const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
@@ -390,42 +448,35 @@ describe('runDailySend send log (idempotency)', () => {
       channel: 'email',
       sender: 'fake-email',
       ok: false,
-      error: 'Send log check failed: connection refused',
+      error: 'Send log claim failed: connection refused',
     });
     expect(email.send).not.toHaveBeenCalled();
     expect(whatsapp.send).toHaveBeenCalledTimes(1);
   });
 
-  test('a send log write failure is reported and makes the run not ok', async () => {
+  test.each([
+    ['throws', () => finishSendLog.mockRejectedValue(new Error('disk full')), 'Send log write failed: disk full'],
+    ['finds the row no longer claimed', () => finishSendLog.mockResolvedValue(false), 'Send log write failed: row was no longer claimed'],
+  ])('a finish that %s is reported and makes the run not ok', async (_name, arrange, logError) => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([fakeSender('fake-email', 'email')]);
-    insertSendLog.mockRejectedValue(new Error('disk full'));
+    arrange();
 
     const report = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
 
     expect(report).toMatchObject({ status: 'failed', ok: false });
     expect(report.results).toEqual([
-      {
-        program: 'time4nach',
-        channel: 'email',
-        sender: 'fake-email',
-        ok: true,
-        id: 'fake-email-time4nach',
-        logError: 'Send log write failed: disk full',
-      },
+      { program: 'time4nach', channel: 'email', sender: 'fake-email', ok: true, id: 'fake-email-time4nach', logError },
     ]);
   });
 
   test('truncates a long provider id list to the column size', async () => {
     getDailyContent.mockResolvedValue(content());
-    getSenders.mockReturnValue([
-      fakeSender('a'.repeat(200), 'email'),
-      fakeSender('b'.repeat(200), 'email'),
-    ]);
+    getSenders.mockReturnValue([fakeSender('a'.repeat(200), 'email'), fakeSender('b'.repeat(200), 'email')]);
 
     await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
 
-    expect(insertSendLog.mock.calls[0][0].providerMessageId).toHaveLength(255);
+    expect(finishSendLog.mock.calls[0][1].providerMessageId).toHaveLength(255);
   });
 
   test('skipped Shabbos and missing dates never touch the send log', async () => {
@@ -434,8 +485,102 @@ describe('runDailySend send log (idempotency)', () => {
     await runDailySend({ date: '2026-10-03' });
     getDailyContent.mockResolvedValue(null);
     await runDailySend({ date: '2030-01-01' });
-    expect(selectSendLog).not.toHaveBeenCalled();
-    expect(insertSendLog).not.toHaveBeenCalled();
+    sendLogFns().forEach((fn) => expect(fn).not.toHaveBeenCalled());
+  });
+});
+
+describe('runDailySend concurrency (G2)', () => {
+  // In-memory send_log with the same unique-key semantics as the MySQL table.
+  // Every call yields first, so concurrent runs interleave as they would over a network.
+  const installFakeSendLog = () => {
+    const rows = new Map();
+    const id = (k) => [k.date, k.program, k.channel, k.mode].join('|');
+    const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+    claimSendLog.mockImplementation(async (k) => {
+      await tick();
+      if (rows.has(id(k))) return false;
+      rows.set(id(k), { status: 'claimed', attempts: 1 });
+      return true;
+    });
+    reclaimFailedSendLog.mockImplementation(async (k) => {
+      await tick();
+      const row = rows.get(id(k));
+      if (!row || row.status !== 'failed') return false;
+      row.status = 'claimed';
+      row.attempts += 1;
+      return true;
+    });
+    finishSendLog.mockImplementation(async (k, { status }) => {
+      await tick();
+      const row = rows.get(id(k));
+      if (!row || row.status !== 'claimed') return false;
+      row.status = status;
+      return true;
+    });
+    selectSendLog.mockImplementation(async (k) => {
+      await tick();
+      return rows.has(id(k)) ? [{ ...rows.get(id(k)) }] : [];
+    });
+    return rows;
+  };
+
+  test('two concurrent runs send each program/channel exactly once', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const rows = installFakeSendLog();
+    const email = fakeSender('fake-email', 'email', async (message) => {
+      // A slow provider call, so the other run reaches the same key mid-send.
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return { ok: true, id: `id-${message.program}` };
+    });
+    getSenders.mockReturnValue([email]);
+
+    const reports = await Promise.all([
+      runDailySend({ date: '2026-09-28' }),
+      runDailySend({ date: '2026-09-28' }),
+    ]);
+
+    // Each program was sent once in total, by whichever run claimed it.
+    expect(email.send.mock.calls.map(([message]) => message.program).sort()).toEqual(['time4mishna', 'time4nach']);
+    const all = reports.flatMap((report) => report.results);
+    for (const program of ['time4mishna', 'time4nach']) {
+      const forProgram = all.filter((result) => result.program === program);
+      expect(forProgram.filter((result) => result.ok && !result.skipped)).toHaveLength(1);
+      expect(forProgram.filter((result) => !result.ok || result.skipped)).toHaveLength(1);
+    }
+    expect([...rows.values()].map((row) => row.status)).toEqual(['sent', 'sent']);
+  });
+
+  test('a run after a completed run skips everything', async () => {
+    getDailyContent.mockResolvedValue(content());
+    installFakeSendLog();
+    const email = fakeSender('fake-email', 'email');
+    getSenders.mockReturnValue([email]);
+
+    await runDailySend({ date: '2026-09-28' });
+    const second = await runDailySend({ date: '2026-09-28' });
+
+    expect(email.send).toHaveBeenCalledTimes(2);
+    expect(second).toMatchObject({ status: 'sent', ok: true });
+    expect(second.results.every((result) => result.skipped)).toBe(true);
+  });
+
+  test('a failed run is retried once by the next run, with attempts counted', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const rows = installFakeSendLog();
+    let fail = true;
+    const email = fakeSender('fake-email', 'email', async (message) =>
+      fail ? { ok: false, error: 'provider down' } : { ok: true, id: `id-${message.program}` }
+    );
+    getSenders.mockReturnValue([email]);
+
+    const first = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+    fail = false;
+    const second = await runDailySend({ date: '2026-09-28', programs: ['time4nach'] });
+
+    expect(first).toMatchObject({ status: 'failed', ok: false });
+    expect(second).toMatchObject({ status: 'sent', ok: true });
+    expect([...rows.values()]).toEqual([{ status: 'sent', attempts: 2 }]);
   });
 });
 

@@ -7,9 +7,11 @@ const { isValidGregorianDate } = require('./dailyContentService');
  * @property {string} program
  * @property {'email'|'whatsapp'} channel
  * @property {'dry-run'|'live'} mode
- * @property {'sent'|'failed'} status
+ * @property {'claimed'|'sent'|'failed'} status `claimed` = in progress, or interrupted mid-send.
+ * @property {number} attempts
  * @property {string|null} providerMessageId
  * @property {Date|string} createdAt
+ * @property {Date|string} updatedAt
  */
 
 const toEntry = (row) => ({
@@ -18,13 +20,15 @@ const toEntry = (row) => ({
   channel: row.channel,
   mode: row.mode,
   status: row.status,
+  attempts: row.attempts,
   providerMessageId: row.provider_message_id,
   createdAt: row.created_at,
+  updatedAt: row.updated_at,
 });
 
 /**
- * Read-only view of send_log for one date, oldest attempt first. A date with
- * no attempts returns an empty list.
+ * Read-only view of send_log for one date: one entry per program/channel/mode,
+ * oldest first. A date with no attempts returns an empty list.
  *
  * @param {{ date: string }} options
  * @returns {Promise<{ date: string, entries: SendLogEntry[] }>}
