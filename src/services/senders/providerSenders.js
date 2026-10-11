@@ -1,7 +1,7 @@
 // Live-mode placeholders. The email provider (MailerLite / Brevo) and the
 // WhatsApp BSP (Wati / AiSensy) haven't been chosen, so these senders must
 // not contact anything: send() always rejects. Replace them with real
-// implementations once a provider is chosen (see backlog F1 checklist).
+// implementations once a provider is chosen (see the checklist in docs/SENDING.md).
 
 const NOT_IMPLEMENTED = 'Not implemented: provider not chosen';
 

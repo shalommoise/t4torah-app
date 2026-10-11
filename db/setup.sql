@@ -112,7 +112,7 @@ CREATE TABLE time4nach_daily_schedule (
   FOREIGN KEY (date_id) REFERENCES dates_table(date_id)
 ); 
 
--- Daily send automation (feature/send-automation, backlog D2/G2).
+-- Daily send automation (feature/send-automation).
 -- One row per date/program/channel/mode. A job sends only after claiming the
 -- row: INSERT a 'claimed' row (duplicate key = already claimed), or flip a
 -- 'failed' row back to 'claimed'; then it sets 'sent' or 'failed'. A row left

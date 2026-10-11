@@ -31,8 +31,8 @@ const MODES = ['dry-run', 'live'];
 const DEFAULT_MODE = 'dry-run';
 
 /**
- * Sender factories by mode and channel. Dry-run senders (backlog C2) and
- * live-mode stubs (C3) are registered here; live mode is only used when
+ * Sender factories by mode and channel. Dry-run senders and
+ * live-mode stubs are registered here; live mode is only used when
  * `config.mode === 'live'`.
  *
  * @type {Record<string, Record<Channel, SenderFactory[]>>}

@@ -16,6 +16,11 @@ const checkIfYomTov = (titleDate) => {
   return yomTovs.includes(removeApostraphes(titleDate));
 }
 
+// "YYYY-MM-DD" parses as UTC midnight, so read the UTC weekday; getDay() would
+// shift it back a day on servers behind UTC.
+const getDayOfWeek = (dateStr) => weekdays[new Date(dateStr).getUTCDay()];
+exports.getDayOfWeek = getDayOfWeek;
+
 exports.getDateRange = (start, end) => {
   return axios.get(`${hebDatCalBaseURL}&start=${start}&end=${end}&d=on`)
     .then((res) => {
@@ -25,7 +30,7 @@ exports.getDateRange = (start, end) => {
           title: removeApostraphes(item.title),
           date: item.date,
           hdate: removeApostraphes(item.hdate),
-          dayOfWeek: weekdays[new Date(item["date"]).getDay()],
+          dayOfWeek: getDayOfWeek(item["date"]),
           hebrewDate: removeApostraphes(item.hebrew),
           isYomTov: checkIfYomTov(item.title),
           specialDay: specialDays[removeApostraphes(item.title)] ? specialDays[removeApostraphes(item.title)] : null

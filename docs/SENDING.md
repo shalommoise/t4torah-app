@@ -173,7 +173,7 @@ Cron treats a non-zero exit as a failure; point `MAILTO` or your monitoring at i
 
 ## Plugging in a real provider (checklist)
 
-1. **Choose providers** and record the decision in `PROGRESS.md` (email: MailerLite / Brevo; WhatsApp BSP: Wati / AiSensy).
+1. **Choose providers** and record the decision (e.g. in this file or the PR description) (email: MailerLite / Brevo; WhatsApp BSP: Wati / AiSensy).
 2. **Credentials** go in `.env` only. Add placeholder names to `.env.example` (e.g. `EMAIL_PROVIDER_API_KEY=`). Never commit real keys.
 3. **Implement the sender** in `src/services/senders/providerSenders.js`, replacing the stub:
    - keep the interface: `{ name, channel, send(message) → Promise<{ ok, id?, error? }> }`;

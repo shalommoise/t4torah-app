@@ -86,7 +86,7 @@ const renderSectionText = ({ title, items }) => {
 
 /**
  * Renders the daily email body (HTML and plain text) from `getDailyContent`
- * output. The subject line is built separately (see backlog B4).
+ * output. The subject line is built separately (see subjectLine.js).
  *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
  * @param {{ program: 'time4mishna'|'time4nach'|'combined' }} options

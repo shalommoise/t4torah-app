@@ -17,8 +17,8 @@ const NO_SHIUR_TEXT = 'No shiur today.';
 const LINK_PATTERN = /\b(?:https?:\/\/|www\.)\S+/gi;
 
 /**
- * Removes URLs from free text (daily messages contain no external links, see
- * backlog R1). Returns `null` if nothing is left.
+ * Removes URLs from free text (daily messages contain no external links).
+ * Returns `null` if nothing is left.
  *
  * @param {string|null|undefined} value
  * @returns {string|null}

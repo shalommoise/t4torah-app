@@ -1,3 +1,5 @@
+> Build log for PR #1 (`feature/send-automation` → `master`), kept for history. BACKLOG.md and the unattended-run rules were removed before merge.
+
 # Progress log — `feature/send-automation`
 
 Newest entries at the bottom. Each unattended run appends one entry.
