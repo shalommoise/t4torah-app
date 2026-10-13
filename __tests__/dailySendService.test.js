@@ -12,6 +12,8 @@ const {
   selectSendLog,
 } = require('../src/models/sendLogModel');
 
+const LIVE_EMAIL_CONFIG = { bucketUrl: 'https://bucket.test', assetsUrl: null, unsubscribeUrl: null };
+
 jest.mock('../src/services/dailyContentService', () => ({
   getDailyContent: jest.fn(),
 }));
@@ -130,7 +132,7 @@ describe('runDailySend', () => {
   test('dryRun=false selects live mode', async () => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([]);
-    const report = await runDailySend({ date: '2026-09-28', dryRun: false });
+    const report = await runDailySend({ date: '2026-09-28', dryRun: false, emailConfig: LIVE_EMAIL_CONFIG });
     expect(report.mode).toBe('live');
     expect(getSenders.mock.calls[0][0].mode).toBe('live');
   });
@@ -424,7 +426,7 @@ describe('runDailySend send claim (G2)', () => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([fakeSender('live-email', 'email')]);
 
-    await runDailySend({ date: '2026-09-28', programs: ['time4nach'], dryRun: false });
+    await runDailySend({ date: '2026-09-28', programs: ['time4nach'], dryRun: false, emailConfig: LIVE_EMAIL_CONFIG });
 
     expect(claimSendLog).toHaveBeenCalledWith(key('time4nach', 'email', 'live'));
     expect(finishSendLog).toHaveBeenCalledWith(key('time4nach', 'email', 'live'), expect.any(Object));
@@ -617,10 +619,18 @@ describe('runDailySend with the real dry-run senders', () => {
 
   test('live mode fails every send loudly via the provider stubs', async () => {
     getDailyContent.mockResolvedValue(content());
-    const report = await runDailySend({ date: '2026-09-28', dryRun: false, outboxDir });
+    const report = await runDailySend({ date: '2026-09-28', dryRun: false, outboxDir, emailConfig: LIVE_EMAIL_CONFIG });
     expect(report).toMatchObject({ mode: 'live', status: 'failed', ok: false });
     expect(report.results).toHaveLength(4);
     report.results.forEach((result) => expect(result.error).toBe('Not implemented: provider not chosen'));
     expect(fs.readdirSync(outboxDir)).toEqual([]);
+  });
+});
+
+describe('runDailySend live email config', () => {
+  test('refuses a live send without BUCKET_PATH, before reading content', async () => {
+    await expect(
+      runDailySend({ date: '2026-09-28', dryRun: false, emailConfig: { bucketUrl: null, assetsUrl: null, unsubscribeUrl: null } })
+    ).rejects.toThrow('BUCKET_PATH must be set for a live send');
   });
 });

@@ -3,6 +3,7 @@ const {
   formatNachShiurLabel,
   getAdditionalNotice,
 } = require('../shiurLabelService');
+const { buildMishnaShiurLinks } = require('./emailLinks');
 
 // Shared by the email and WhatsApp renderers.
 
@@ -17,7 +18,8 @@ const NO_SHIUR_TEXT = 'No shiur today.';
 const LINK_PATTERN = /\b(?:https?:\/\/|www\.)\S+/gi;
 
 /**
- * Removes URLs from free text (daily messages contain no external links).
+ * Removes URLs from database free text (notices, special dates), so only
+ * Time4Torah's own links (see emailLinks.js) appear in messages.
  * Returns `null` if nothing is left.
  *
  * @param {string|null|undefined} value
@@ -51,11 +53,12 @@ const formatGregorianDate = (gregorianDate) => {
   return `${weekday} ${rest}`;
 };
 
-const toShiurItems = (rows, formatLabel) =>
+const toShiurItems = (rows, formatLabel, buildLinks = () => null) =>
   (rows || [])
     .map((row) => ({
       label: formatLabel(row),
       notice: stripLinks(getAdditionalNotice(row)),
+      links: buildLinks(row),
     }))
     .filter((item) => item.label || item.notice);
 
@@ -63,16 +66,23 @@ const toShiurItems = (rows, formatLabel) =>
  * Per-program sections for a message. Items with neither a label nor a
  * notice are dropped, so an empty `items` means a no-shiur day.
  *
+ * With `bucketUrl`, regular Time4Mishna items get `links` ({ audio, text });
+ * every other item has `links: null`. Time4Nach has no file links yet.
+ *
  * @param {{ time4mishna: object[], time4nach: object[] }} content
  * @param {'time4mishna'|'time4nach'|'combined'} program
- * @returns {{ title: string, items: { label: string|null, notice: string|null }[] }[]}
+ * @param {{ bucketUrl?: string|null }} [options]
+ * @returns {{ title: string, items: { label: string|null, notice: string|null,
+ *   links: { audio: string, text: string }|null }[] }[]}
  */
-const getSections = (content, program) => {
+const getSections = (content, program, { bucketUrl = null } = {}) => {
   const sections = [];
   if (program === 'time4mishna' || program === 'combined') {
     sections.push({
       title: PROGRAM_TITLES.time4mishna,
-      items: toShiurItems(content.time4mishna, formatMishnaShiurLabel),
+      items: toShiurItems(content.time4mishna, formatMishnaShiurLabel, (row) =>
+        buildMishnaShiurLinks(row, bucketUrl)
+      ),
     });
   }
   if (program === 'time4nach' || program === 'combined') {

@@ -2,6 +2,7 @@ const { getDailyContent } = require('./dailyContentService');
 const { shouldSendOn, getCalendarRowProblem } = require('./sendRules');
 const { getSenders } = require('./senders');
 const { getSendConfig } = require('../config/send');
+const { getEmailConfig } = require('../config/email');
 const { createDailyMessage } = require('./render/dailyMessage');
 const { renderEmail } = require('./render/emailRenderer');
 const { renderWhatsapp } = require('./render/whatsappRenderer');
@@ -45,13 +46,18 @@ const errorMessage = (error) => (error && error.message) || String(error);
  *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
  * @param {'time4mishna'|'time4nach'|'combined'} program
+ * @param {{ bucketUrl: string|null, assetsUrl: string|null, unsubscribeUrl: string|null }} [emailConfig]
+ *   Defaults to getEmailConfig(process.env).
  * @returns {import('./render/dailyMessage').DailyMessage}
  */
-const renderDailyMessage = (content, program) =>
+const renderDailyMessage = (content, program, emailConfig = getEmailConfig(process.env)) =>
   createDailyMessage({
     date: content.date.gregorian_date,
     program,
-    email: { subject: buildSubject(content.date, program), ...renderEmail(content, { program }) },
+    email: {
+      subject: buildSubject(content.date, program),
+      ...renderEmail(content, { program, ...emailConfig }),
+    },
     whatsapp: renderWhatsapp(content, { program }),
   });
 
@@ -167,6 +173,8 @@ const getStatus = (results) => {
  * @param {string} [options.outboxDir] For the dry-run file sender.
  * @param {{ log: (line: string) => void }} [options.logger] For the dry-run console sender.
  * @param {boolean} [options.force=false] Claim and send even if send_log says `sent` or `claimed`.
+ * @param {object} [options.emailConfig] Defaults to getEmailConfig(process.env). A live
+ *   send needs `bucketUrl` (BUCKET_PATH), or the email would have no shiur links.
  * @returns {Promise<SendReport>}
  */
 const runDailySend = async ({
@@ -177,9 +185,13 @@ const runDailySend = async ({
   outboxDir,
   logger,
   force = false,
+  emailConfig = getEmailConfig(process.env),
 } = {}) => {
   const mode = dryRun === false ? 'live' : 'dry-run';
   const report = { date, mode };
+  if (mode === 'live' && !emailConfig.bucketUrl) {
+    throw new Error('BUCKET_PATH must be set for a live send (the email links to the shiur files)');
+  }
 
   const content = await getDailyContent(date);
   if (!content) {
@@ -206,7 +218,7 @@ const runDailySend = async ({
   for (const program of programs) {
     let message;
     try {
-      message = renderDailyMessage(content, program);
+      message = renderDailyMessage(content, program, emailConfig);
     } catch (error) {
       senders.forEach((sender) =>
         results.push({ program, channel: sender.channel, sender: null, ok: false, error: `Render failed: ${errorMessage(error)}` })
