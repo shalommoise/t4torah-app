@@ -7,6 +7,7 @@ const datesRouter = require('./datesRouter');
 const tanachRouter = require('./tanachRouter');
 const time4mishnaRouter = require('./time4mishnaRouter');
 const time4nachRouter = require('./time4nachRouter');
+const sendsRouter = require('./sendsRouter');
 const router = express.Router();
 
 router.get('/health', healthController.getHealth);
@@ -17,4 +18,5 @@ router.use('/dates/', datesRouter);
 router.use('/tanach/', tanachRouter);
 router.use('/time4mishna/', time4mishnaRouter);
 router.use('/time4nach/', time4nachRouter);
+router.use('/sends/', sendsRouter);
 module.exports = router;

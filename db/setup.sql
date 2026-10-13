@@ -111,3 +111,23 @@ CREATE TABLE time4nach_daily_schedule (
   FOREIGN KEY (time4nach_shiur_id) REFERENCES time4nach_shiurim(time4nach_shiur_id),
   FOREIGN KEY (date_id) REFERENCES dates_table(date_id)
 ); 
+
+-- Daily send automation (feature/send-automation).
+-- One row per date/program/channel/mode. A job sends only after claiming the
+-- row: INSERT a 'claimed' row (duplicate key = already claimed), or flip a
+-- 'failed' row back to 'claimed'; then it sets 'sent' or 'failed'. A row left
+-- 'claimed' (crash mid-send) is never resent automatically.
+CREATE TABLE send_log (
+  send_log_id INT NOT NULL AUTO_INCREMENT,
+  send_date VARCHAR(12) NOT NULL,
+  program ENUM('time4mishna', 'time4nach', 'combined') NOT NULL,
+  channel ENUM('email', 'whatsapp') NOT NULL,
+  mode ENUM('dry-run', 'live') NOT NULL,
+  status ENUM('claimed', 'sent', 'failed') NOT NULL,
+  attempts INT NOT NULL DEFAULT 1,
+  provider_message_id VARCHAR(255),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (send_log_id),
+  UNIQUE KEY send_log_once (send_date, program, channel, mode)
+);
