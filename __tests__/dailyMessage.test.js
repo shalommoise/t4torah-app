@@ -12,8 +12,19 @@ describe('createDailyMessage', () => {
     expect(PROGRAMS).toEqual(['time4mishna', 'time4nach', 'combined']);
   });
 
-  test('returns the DailyMessage shape for valid fields', () => {
-    expect(createDailyMessage(validFields())).toEqual(validFields());
+  test('returns the DailyMessage shape for valid fields, defaulting attachments to []', () => {
+    const expected = validFields();
+    expected.whatsapp.attachments = [];
+    expect(createDailyMessage(validFields())).toEqual(expected);
+  });
+
+  test('keeps valid WhatsApp attachments', () => {
+    const attachments = [
+      { type: 'audio', url: 'https://bucket.test/a.mp3', filename: 'a.mp3' },
+      { type: 'document', url: 'https://bucket.test/a.pdf', filename: 'a.pdf' },
+    ];
+    const message = createDailyMessage({ ...validFields(), whatsapp: { text: 'x', attachments } });
+    expect(message.whatsapp.attachments).toEqual(attachments);
   });
 
   test('drops unknown fields', () => {
@@ -40,6 +51,10 @@ describe('createDailyMessage', () => {
     ['email missing html', { email: { subject: 's', text: 't' } }],
     ['missing whatsapp', { whatsapp: undefined }],
     ['non-string whatsapp text', { whatsapp: { text: 5 } }],
+    ['attachments not an array', { whatsapp: { text: 'x', attachments: 'a.mp3' } }],
+    ['unknown attachment type', { whatsapp: { text: 'x', attachments: [{ type: 'video', url: 'https://b/a', filename: 'a' }] } }],
+    ['non-http attachment url', { whatsapp: { text: 'x', attachments: [{ type: 'audio', url: '/local/a.mp3', filename: 'a' }] } }],
+    ['attachment without filename', { whatsapp: { text: 'x', attachments: [{ type: 'audio', url: 'https://b/a.mp3' }] } }],
   ])('throws for %s', (_name, overrides) => {
     expect(() => createDailyMessage({ ...validFields(), ...overrides })).toThrow(TypeError);
   });

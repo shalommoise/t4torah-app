@@ -7,7 +7,7 @@ const DEFAULT_OUTBOX_DIR = 'outbox';
 /**
  * Files to write for a message on a channel, relative to the day's outbox
  * folder. Email gets `.html` plus a `.txt` with the subject on top; WhatsApp
- * gets `.txt`.
+ * gets `.txt`, with any attachments listed after the text.
  */
 const getOutboxFiles = (channel, message) => {
   const base = `${channel}-${message.program}`;
@@ -17,7 +17,10 @@ const getOutboxFiles = (channel, message) => {
       { name: `${base}.txt`, content: `Subject: ${message.email.subject}\n\n${message.email.text}` },
     ];
   }
-  return [{ name: `${base}.txt`, content: message.whatsapp.text }];
+  const { text, attachments } = message.whatsapp;
+  const attachmentLines = attachments.map((file) => `- ${file.type}: ${file.filename} (${file.url})`);
+  const content = attachments.length ? `${text}\n\n--- attachments ---\n${attachmentLines.join('\n')}\n` : text;
+  return [{ name: `${base}.txt`, content }];
 };
 
 /**

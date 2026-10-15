@@ -58,7 +58,7 @@ const renderDailyMessage = (content, program, emailConfig = getEmailConfig(proce
       subject: buildSubject(content.date, program),
       ...renderEmail(content, { program, ...emailConfig }),
     },
-    whatsapp: renderWhatsapp(content, { program }),
+    whatsapp: renderWhatsapp(content, { program, bucketUrl: emailConfig.bucketUrl }),
   });
 
 /**

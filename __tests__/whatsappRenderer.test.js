@@ -168,3 +168,30 @@ describe('truncate', () => {
     expect(Array.from(truncate('😀'.repeat(10), 5))).toHaveLength(5);
   });
 });
+
+describe('WhatsApp attachments', () => {
+  const BUCKET = 'https://bucket.test/t4t';
+
+  test('regular Time4Mishna shiur sends the mp3 and the text pdf, not links', () => {
+    const { text, attachments } = renderWhatsapp(
+      content({ time4mishna: [mishnaRow({ shiur_title: 'Bava Kama 1:1-1:4' })] }),
+      { program: 'time4mishna', bucketUrl: BUCKET }
+    );
+    expect(attachments).toEqual([
+      { type: 'audio', url: `${BUCKET}/mishna/shiurim/bava_kama_1:1-1:4.mp3`, filename: 'bava_kama_1:1-1:4.mp3' },
+      { type: 'document', url: `${BUCKET}/mishna/texts/bava_kama_1:1-1:4.pdf`, filename: 'bava_kama_1:1-1:4.pdf' },
+    ]);
+    expect(text).not.toMatch(/https?:\/\//);
+  });
+
+  test('no attachments without a bucket URL, on a chazara day, or for Time4Nach', () => {
+    expect(renderWhatsapp(content(), { program: 'time4mishna' }).attachments).toEqual([]);
+    expect(
+      renderWhatsapp(content({ time4mishna: [mishnaRow({ shiur_type: 'chazara', shiur_title: 'x' })] }), {
+        program: 'time4mishna',
+        bucketUrl: BUCKET,
+      }).attachments
+    ).toEqual([]);
+    expect(renderWhatsapp(content(), { program: 'time4nach', bucketUrl: BUCKET }).attachments).toEqual([]);
+  });
+});

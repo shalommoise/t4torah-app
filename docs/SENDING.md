@@ -38,7 +38,8 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 
 ### Content rules
 
-- **Only Time4Torah's own links.** The email links to the day's SHIUR (mp3) and TEXT (pdf) in the bucket, plus the fixed links in `src/services/render/emailLinks.js` (apps, WhatsApp group, website, donate, social) and the provider's unsubscribe link. No Sefaria links. URLs typed into `special_date` or `additional_notice` are still removed. The WhatsApp message has no links.
+- **Only Time4Torah's own links.** The email links to the day's SHIUR (mp3) and TEXT (pdf) in the bucket, plus the fixed links in `src/services/render/emailLinks.js` (apps, WhatsApp group, website, donate, social) and the provider's unsubscribe link. No Sefaria links. URLs typed into `special_date` or `additional_notice` are still removed.
+- **WhatsApp sends the files, not links.** The text has no URLs; the day's shiur mp3 (`audio`) and text pdf (`document`) come in `message.whatsapp.attachments` as `{ type, url, filename }`, for the provider to fetch by URL. Dry-run output lists them after the text.
 - **Email design** follows the Time4Torah Mailchimp template (`src/templates/dailyEmail.html`): logo banner, shiur with SHIUR/TEXT links, app/WhatsApp links, sign-off, signature, donate links, social links, unsubscribe footer. Fridays add "Have a Good Shabbos!".
 - **Shiur file links** use the same naming as the time4mishna API (`utils/findFile.js`): `<BUCKET_PATH>/mishna/shiurim/<title>.mp3` and `<BUCKET_PATH>/mishna/texts/<title>.pdf`, where `<title>` is `shiur_title` lower-cased with spaces as `_` (e.g. `bava_kama_1:1-1:4`). Only regular Time4Mishna shiurim get links; chazara days and Time4Nach have none yet (the weekly text/summaries need their own generation workflow).
 - **WhatsApp formatting characters** (`*`, `_`, `~`, `` ` ``) are removed from database text, so a notice can't break the message's formatting. Email is not affected.
@@ -186,7 +187,8 @@ Cron treats a non-zero exit as a failure; point `MAILTO` or your monitoring at i
    - return `{ ok: false, error }` for provider errors. Throwing is also handled, but a returned error is clearer.
 4. **Unsubscribe link:** set `EMAIL_UNSUBSCRIBE_URL` to the provider's unsubscribe merge tag (check the provider's docs for the exact tag). Required by law for bulk email.
 5. **Decide the audience model.** The current `DailyMessage` has no recipients. Decide whether the provider sends to a list/segment per program (e.g. one MailerLite group per program) and keep that mapping in config, not code.
-6. **WhatsApp specifics:** business-initiated messages usually need an approved template. Check that the rendered text fits the BSP's template/variable rules, and whether the 1,000-character cap (`WHATSAPP_MAX_LENGTH`) should change.
-7. **Tests:** mock the provider's HTTP client and never call the real API in tests (`npm run test:ci` must stay offline).
-8. **Try it safely first:** send to a test list/number with `SEND_MODE=live` and `--dry-run=false --date=<a test date>`, then check `GET /api/v1/sends/log`.
-9. **Only then** add the cron line with `--dry-run=false`, and keep `SEND_MODE=live` in the server's `.env`.
+6. **WhatsApp attachments:** send `message.whatsapp.attachments` as media messages (audio + document) by URL. The bucket files must be publicly reachable. Check with the BSP how this works for a broadcast: business-initiated messages need an approved template, and template headers support documents but (as far as we know) not audio, so the mp3 may have to go as a document or as a follow-up message. Also confirm whether the BSP can post to the existing WhatsApp groups or only to individual numbers.
+7. **WhatsApp specifics:** business-initiated messages usually need an approved template. Check that the rendered text fits the BSP's template/variable rules, and whether the 1,000-character cap (`WHATSAPP_MAX_LENGTH`) should change.
+8. **Tests:** mock the provider's HTTP client and never call the real API in tests (`npm run test:ci` must stay offline).
+9. **Try it safely first:** send to a test list/number with `SEND_MODE=live` and `--dry-run=false --date=<a test date>`, then check `GET /api/v1/sends/log`.
+10. **Only then** add the cron line with `--dry-run=false`, and keep `SEND_MODE=live` in the server's `.env`.

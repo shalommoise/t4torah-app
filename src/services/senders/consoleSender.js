@@ -17,10 +17,13 @@ const createConsoleSender = (channel, config = {}) => {
     channel,
     send: async (message) => {
       try {
+        const attachmentCount = (message.whatsapp && message.whatsapp.attachments ? message.whatsapp.attachments : []).length;
         const detail =
           channel === 'email'
             ? `"${message.email.subject}" (${countChars(message.email.text)} chars text, ${countChars(message.email.html)} chars html)`
-            : `(${countChars(message.whatsapp.text)} chars)`;
+            : `(${countChars(message.whatsapp.text)} chars${
+                attachmentCount ? `, ${attachmentCount} attachments` : ''
+              })`;
         logger.log(`[dry-run] ${channel} ${message.program} ${message.date}: ${detail}`);
         return { ok: true, id: `console-${channel}-${message.program}-${message.date}` };
       } catch (error) {
