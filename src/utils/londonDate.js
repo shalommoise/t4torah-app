@@ -53,4 +53,56 @@ const addDays = (date, days) => {
  */
 const londonTomorrow = (instant = new Date()) => addDays(londonToday(instant), 1);
 
-module.exports = { TIME_ZONE, londonToday, londonTomorrow, addDays };
+const TIME_PATTERN = /^(\d{2}):(\d{2})$/;
+
+/**
+ * Offset of `timeZone` from UTC at `instant`, in milliseconds (e.g. +1h in BST).
+ */
+const zoneOffsetMs = (instant, timeZone) => {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+      .formatToParts(instant)
+      .map(({ type, value }) => [type, Number(value)])
+  );
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+  return asUtc - Math.floor(instant.getTime() / 1000) * 1000;
+};
+
+/**
+ * The instant at which the wall clock in `timeZone` reads `date` `time`, e.g.
+ * 2026-07-01 05:15 Europe/London → 2026-07-01T04:15:00.000Z (BST). Not meant
+ * for times inside a clocks-change gap (01:00–02:00 in London).
+ *
+ * @param {string} date YYYY-MM-DD
+ * @param {string} time HH:MM
+ * @param {string} [timeZone]
+ * @returns {Date}
+ */
+const zonedTimeToUtc = (date, time, timeZone = TIME_ZONE) => {
+  const dateMatch = DATE_PATTERN.exec(date || '');
+  const timeMatch = TIME_PATTERN.exec(time || '');
+  if (!dateMatch || !timeMatch) {
+    throw new TypeError('zonedTimeToUtc requires a YYYY-MM-DD date and an HH:MM time');
+  }
+  const wallClock = Date.UTC(
+    Number(dateMatch[1]),
+    Number(dateMatch[2]) - 1,
+    Number(dateMatch[3]),
+    Number(timeMatch[1]),
+    Number(timeMatch[2])
+  );
+  // Two passes: the offset at the first guess can differ on a clocks-change day.
+  const guess = wallClock - zoneOffsetMs(new Date(wallClock), timeZone);
+  return new Date(wallClock - zoneOffsetMs(new Date(guess), timeZone));
+};
+
+module.exports = { TIME_ZONE, londonToday, londonTomorrow, addDays, zonedTimeToUtc };
