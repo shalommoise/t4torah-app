@@ -7,6 +7,8 @@
  * @property {boolean} ok
  * @property {string} [id] Provider or outbox id of the sent message.
  * @property {string} [error] Why the send failed, when `ok` is false.
+ * @property {boolean} [uncertain] With `ok: false`: the provider may still have
+ *   accepted the message, so the run must not be retried automatically.
  */
 
 /**

@@ -422,6 +422,39 @@ describe('runDailySend send claim (G2)', () => {
     });
   });
 
+  test('an uncertain outcome leaves the row claimed (never failed, so never auto-retried)', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([
+      fakeSender('maybe-email', 'email', async () => ({ ok: false, uncertain: true, error: 'schedule timed out' })),
+    ]);
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4mishna'] });
+
+    expect(claimSendLog).toHaveBeenCalledWith(key('time4mishna', 'email'));
+    expect(finishSendLog).not.toHaveBeenCalled();
+    expect(report).toMatchObject({ status: 'failed', ok: false });
+    expect(report.results).toEqual([
+      {
+        program: 'time4mishna',
+        channel: 'email',
+        sender: 'maybe-email',
+        ok: false,
+        uncertain: true,
+        error: 'schedule timed out; outcome unknown, send_log left claimed: check the provider before using --force',
+      },
+    ]);
+  });
+
+  test('a definite failure has no uncertain flag and is recorded as failed', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([fakeSender('bad-email', 'email', async () => ({ ok: false, error: 'draft only' }))]);
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4mishna'] });
+
+    expect(report.results[0]).not.toHaveProperty('uncertain');
+    expect(finishSendLog).toHaveBeenCalledWith(key('time4mishna', 'email'), { status: 'failed', providerMessageId: null });
+  });
+
   test('uses the mode in the key, so a dry-run does not block live', async () => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([fakeSender('live-email', 'email')]);
