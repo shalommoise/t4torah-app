@@ -1,6 +1,15 @@
 const { parseArgs, formatReport, londonToday, main, UsageError, USAGE } = require('../jobs/dailySend');
 
+const { getMailchimpConfig, hasMailchimpConfig } = require('../src/config/mailchimp');
+
 const today = '2026-09-28';
+
+const MAILCHIMP_ENV = {
+  MAILCHIMP_API_KEY: 'key-us21',
+  MAILCHIMP_AUDIENCE_ID: 'list1',
+  MAILCHIMP_FROM_NAME: 'Time4Mishna',
+  MAILCHIMP_REPLY_TO: 'info@example.org',
+};
 
 describe('parseArgs', () => {
   test('defaults: today, dry-run, no channel override, no force', () => {
@@ -94,6 +103,8 @@ describe('main', () => {
       programs: ['time4mishna', 'time4nach'],
       outboxDir: 'outbox',
     })),
+    getMailchimpConfig,
+    hasMailchimpConfig,
     runDailySend: jest.fn().mockResolvedValue(okReport),
     closePool: jest.fn().mockResolvedValue(),
     log: jest.fn(),
@@ -195,10 +206,50 @@ describe('main', () => {
       expect(deps.runDailySend).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
     });
 
-    test('both together go live', async () => {
+    test('both together go live, with the validated Mailchimp config', async () => {
+      const deps = makeDeps({ env: MAILCHIMP_ENV, getSendConfig: jest.fn(liveConfig) });
+      await expect(main(['--dry-run=false'], deps)).resolves.toBe(0);
+      expect(deps.runDailySend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dryRun: false,
+          mailchimp: expect.objectContaining({ audienceId: 'list1', serverPrefix: 'us21', sendTime: '05:15' }),
+        })
+      );
+    });
+
+    test('live email with missing Mailchimp config exits 2 before sending', async () => {
       const deps = makeDeps({ getSendConfig: jest.fn(liveConfig) });
-      await main(['--dry-run=false'], deps);
-      expect(deps.runDailySend).toHaveBeenCalledWith(expect.objectContaining({ dryRun: false }));
+      await expect(main(['--dry-run=false'], deps)).resolves.toBe(2);
+      expect(deps.error).toHaveBeenCalledWith(expect.stringContaining('MAILCHIMP_API_KEY is required'));
+      expect(deps.error).not.toHaveBeenCalledWith(USAGE);
+      expect(deps.runDailySend).not.toHaveBeenCalled();
+      expect(deps.closePool).not.toHaveBeenCalled();
+    });
+
+    test('live WhatsApp only does not need Mailchimp config', async () => {
+      const deps = makeDeps({ getSendConfig: jest.fn(liveConfig) });
+      await expect(main(['--dry-run=false', '--channel=whatsapp'], deps)).resolves.toBe(0);
+      expect(deps.runDailySend.mock.calls[0][0]).not.toHaveProperty('mailchimp');
+    });
+  });
+
+  describe('Mailchimp config in dry-run', () => {
+    test('unset: dry-run runs without it', async () => {
+      const deps = makeDeps();
+      await expect(main([], deps)).resolves.toBe(0);
+      expect(deps.runDailySend.mock.calls[0][0]).not.toHaveProperty('mailchimp');
+    });
+
+    test('set: validated and passed on for the payload preview', async () => {
+      const deps = makeDeps({ env: MAILCHIMP_ENV });
+      await expect(main([], deps)).resolves.toBe(0);
+      expect(deps.runDailySend.mock.calls[0][0].mailchimp).toMatchObject({ audienceId: 'list1' });
+    });
+
+    test('set but invalid: exits 2', async () => {
+      const deps = makeDeps({ env: { MAILCHIMP_AUDIENCE_ID: 'list1' } });
+      await expect(main([], deps)).resolves.toBe(2);
+      expect(deps.runDailySend).not.toHaveBeenCalled();
     });
   });
 });

@@ -3,6 +3,8 @@
 //
 // Going live needs both SEND_MODE=live and --dry-run=false; either alone is
 // dry-run (or a usage error, for --dry-run=false without SEND_MODE=live).
+// Live email goes through Mailchimp, whose MAILCHIMP_* config is checked at
+// startup. In dry-run it is checked only if set, and adds a payload preview.
 //
 // Exit codes: 0 all ok (or skipped Shabbos/Yom Tov), 1 any send failure or
 // missing date, 2 usage/config error.
@@ -116,14 +118,34 @@ const formatReport = (report) => {
   return lines;
 };
 
+/**
+ * The Mailchimp config this run needs, validated up front: required for a
+ * live email send; in dry-run, used (and validated) only if any MAILCHIMP_*
+ * variable is set. `undefined` when not needed.
+ *
+ * @throws if the config is needed and invalid.
+ */
+const resolveMailchimpConfig = ({ env, dryRun, channels }, { getMailchimpConfig, hasMailchimpConfig }) => {
+  if (!channels.includes('email')) {
+    return undefined;
+  }
+  if (!dryRun || hasMailchimpConfig(env)) {
+    return getMailchimpConfig(env);
+  }
+  return undefined;
+};
+
 const loadDefaultDeps = () => {
   require('dotenv').config();
   const { getSendConfig } = require('../src/config/send');
+  const { getMailchimpConfig, hasMailchimpConfig } = require('../src/config/mailchimp');
   const { runDailySend } = require('../src/services/dailySendService');
   return {
     env: process.env,
     now: new Date(),
     getSendConfig,
+    getMailchimpConfig,
+    hasMailchimpConfig,
     runDailySend,
     // Required lazily so --help and usage errors never create the pool.
     closePool: () => require('../src/config/env').pool.end(),
@@ -140,10 +162,12 @@ const loadDefaultDeps = () => {
  * @returns {Promise<number>}
  */
 const main = async (argv, deps = loadDefaultDeps()) => {
-  const { env, now, getSendConfig, runDailySend, closePool, log, error } = deps;
+  const { env, now, getSendConfig, getMailchimpConfig, hasMailchimpConfig, runDailySend, closePool, log, error } = deps;
 
   let args;
   let config;
+  let channels;
+  let mailchimp;
   try {
     args = parseArgs(argv, { today: londonToday(now) });
     if (args.help) {
@@ -154,6 +178,11 @@ const main = async (argv, deps = loadDefaultDeps()) => {
     if (!args.dryRun && config.mode !== 'live') {
       throw new UsageError('--dry-run=false needs SEND_MODE=live');
     }
+    channels = args.channels || config.channels;
+    mailchimp = resolveMailchimpConfig(
+      { env, dryRun: args.dryRun, channels },
+      { getMailchimpConfig, hasMailchimpConfig }
+    );
   } catch (err) {
     error(err.message);
     if (err instanceof UsageError) {
@@ -167,11 +196,12 @@ const main = async (argv, deps = loadDefaultDeps()) => {
     const report = await runDailySend({
       date: args.date,
       dryRun: args.dryRun,
-      channels: args.channels || config.channels,
+      channels,
       programs: config.programs,
       outboxDir: config.outboxDir,
       force: args.force,
       logger: { log },
+      ...(mailchimp && { mailchimp }),
     });
     formatReport(report).forEach((line) => (report.ok ? log(line) : error(line)));
     exitCode = report.ok ? EXIT_OK : EXIT_FAILURE;
@@ -194,4 +224,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, formatReport, londonToday, main, UsageError, USAGE };
+module.exports = { parseArgs, formatReport, resolveMailchimpConfig, londonToday, main, UsageError, USAGE };
