@@ -189,6 +189,8 @@ const getStatus = (results) => {
  * @param {boolean} [options.force=false] Claim and send even if send_log says `sent` or `claimed`.
  * @param {object} [options.emailConfig] Defaults to getEmailConfig(process.env). A live
  *   send needs `bucketUrl` (BUCKET_PATH), or the email would have no shiur links.
+ * @param {object} [options.mailchimp] getMailchimpConfig() output. Needed by the live
+ *   email sender; in dry-run it adds the Mailchimp payload preview.
  * @returns {Promise<SendReport>}
  */
 const runDailySend = async ({
@@ -200,6 +202,7 @@ const runDailySend = async ({
   logger,
   force = false,
   emailConfig = getEmailConfig(process.env),
+  mailchimp,
 } = {}) => {
   const mode = dryRun === false ? 'live' : 'dry-run';
   const report = { date, mode };
@@ -225,7 +228,7 @@ const runDailySend = async ({
     return { ...report, status: 'skipped', ok: true, reason: 'No send on Shabbos or Yom Tov', results: [] };
   }
 
-  const senders = getSenders({ mode, channels, outboxDir, logger });
+  const senders = getSenders({ mode, channels, outboxDir, logger, ...(mailchimp && { mailchimp }) });
 
   const activeChannels = [...new Set(senders.map((sender) => sender.channel))];
   const results = [];

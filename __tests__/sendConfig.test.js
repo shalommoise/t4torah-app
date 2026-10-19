@@ -1,6 +1,16 @@
 const { DEFAULTS, getSendConfig } = require('../src/config/send');
 const { getSenders } = require('../src/services/senders');
 
+const MAILCHIMP = {
+  apiKey: 'key-us21',
+  serverPrefix: 'us21',
+  audienceId: 'list1',
+  fromName: 'Time4Mishna',
+  replyTo: 'info@example.org',
+  sendTime: '05:15',
+  sendTimeZone: 'Europe/London',
+};
+
 describe('getSendConfig', () => {
   test('defaults to dry-run on all channels and both programs', () => {
     expect(getSendConfig({})).toEqual({
@@ -65,6 +75,9 @@ describe('getSendConfig', () => {
   test('output plugs into getSenders', () => {
     const names = (config) => getSenders({ ...config, logger: { log: jest.fn() } }).map((s) => s.name);
     expect(names(getSendConfig({ SEND_CHANNELS: 'email' }))).toEqual(['console-email', 'file-email']);
-    expect(names(getSendConfig({ SEND_MODE: 'live' }))).toEqual(['emailProviderSender', 'whatsappProviderSender']);
+    expect(names({ ...getSendConfig({ SEND_MODE: 'live' }), mailchimp: MAILCHIMP })).toEqual([
+      'mailchimp-email',
+      'whatsappProviderSender',
+    ]);
   });
 });

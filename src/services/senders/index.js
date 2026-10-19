@@ -21,34 +21,39 @@
  */
 
 /**
- * @typedef {(config: object) => Sender} SenderFactory
+ * @typedef {(config: object) => Sender|null} SenderFactory
  */
 
 const { createConsoleSender } = require('./consoleSender');
 const { createFileSender } = require('./fileSender');
-const { createEmailProviderSender, createWhatsappProviderSender } = require('./providerSenders');
+const { createWhatsappProviderSender } = require('./providerSenders');
+const { createMailchimpSender, createMailchimpPreviewSender } = require('./mailchimpSender');
 
 const CHANNELS = ['email', 'whatsapp'];
 const MODES = ['dry-run', 'live'];
 const DEFAULT_MODE = 'dry-run';
 
 /**
- * Sender factories by mode and channel. Dry-run senders and
- * live-mode stubs are registered here; live mode is only used when
- * `config.mode === 'live'`.
+ * Sender factories by mode and channel; live mode is only used when
+ * `config.mode === 'live'`. A factory may return `null` to opt out (the
+ * Mailchimp preview runs only when `config.mailchimp` is set).
  *
  * @type {Record<string, Record<Channel, SenderFactory[]>>}
  */
 const SENDER_REGISTRY = {
   'dry-run': {
-    email: [(config) => createConsoleSender('email', config), (config) => createFileSender('email', config)],
+    email: [
+      (config) => createConsoleSender('email', config),
+      (config) => createFileSender('email', config),
+      (config) => (config.mailchimp ? createMailchimpPreviewSender(config) : null),
+    ],
     whatsapp: [
       (config) => createConsoleSender('whatsapp', config),
       (config) => createFileSender('whatsapp', config),
     ],
   },
   live: {
-    email: [createEmailProviderSender],
+    email: [createMailchimpSender],
     whatsapp: [createWhatsappProviderSender],
   },
 };
@@ -93,13 +98,16 @@ const getSenders = (config = {}, registry = SENDER_REGISTRY) => {
   }
 
   return channels.flatMap((channel) =>
-    ((registry[mode] || {})[channel] || []).map((createSender) => {
-      const sender = assertSender(createSender(config));
-      if (sender.channel !== channel) {
-        throw new Error(`Sender ${sender.name} registered for ${channel} but has channel ${sender.channel}`);
-      }
-      return sender;
-    })
+    ((registry[mode] || {})[channel] || [])
+      .map((createSender) => createSender(config))
+      .filter((sender) => sender !== null)
+      .map((created) => {
+        const sender = assertSender(created);
+        if (sender.channel !== channel) {
+          throw new Error(`Sender ${sender.name} registered for ${channel} but has channel ${sender.channel}`);
+        }
+        return sender;
+      })
   );
 };
 
