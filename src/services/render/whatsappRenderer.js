@@ -8,6 +8,23 @@ const {
 } = require('./dailySections');
 
 const WHATSAPP_MAX_LENGTH = 1000;
+
+const fileNameFromUrl = (url) => decodeURI(url.slice(url.lastIndexOf('/') + 1));
+
+/**
+ * The day's shiur files as WhatsApp attachments: the mp3 as audio and the
+ * text pdf as a document, for each regular Time4Mishna shiur. Same files the
+ * email links to; empty without a bucket URL or on a chazara day.
+ */
+const buildAttachments = (sections) =>
+  sections.flatMap((section) =>
+    section.items
+      .filter((item) => item.links)
+      .flatMap((item) => [
+        { type: 'audio', url: item.links.audio, filename: fileNameFromUrl(item.links.audio) },
+        { type: 'document', url: item.links.text, filename: fileNameFromUrl(item.links.text) },
+      ])
+  );
 const ELLIPSIS = '…';
 
 // WhatsApp formatting markers: *bold*, _italic_, ~strike~, `mono` / ```block```.
@@ -70,15 +87,16 @@ const renderSection = ({ title, items }, showTitle) => {
 /**
  * Renders the daily WhatsApp message from `getDailyContent` output: `*bold*`
  * title and shiurim, `_italic_` special date and notices, blank lines between
- * sections, no links. Formatting characters (`*_~` and backticks) are
+ * sections, no links in the text. The day's shiur mp3 and text pdf come as
+ * `attachments` (needs `bucketUrl`). Formatting characters (`*_~` and backticks) are
  * stripped from DB text first, since WhatsApp can't escape them. Always under
  * WHATSAPP_MAX_LENGTH characters; longer output is truncated with an ellipsis.
  *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
- * @param {{ program: 'time4mishna'|'time4nach'|'combined' }} options
- * @returns {{ text: string }}
+ * @param {{ program: 'time4mishna'|'time4nach'|'combined', bucketUrl?: string|null }} options
+ * @returns {{ text: string, attachments: import('./dailyMessage').WhatsappAttachment[] }}
  */
-const renderWhatsapp = (content, { program }) => {
+const renderWhatsapp = (content, { program, bucketUrl = null }) => {
   assertRenderable(content, program);
 
   const dateRow = content.date;
@@ -93,12 +111,11 @@ const renderWhatsapp = (content, { program }) => {
 
   // A single-program message already names the program in its header.
   const showSectionTitles = program === 'combined';
-  const sections = getSections(content, program).map((section) =>
-    renderSection(section, showSectionTitles)
-  );
+  const sectionData = getSections(content, program, { bucketUrl });
+  const sections = sectionData.map((section) => renderSection(section, showSectionTitles));
 
   const text = [header.join('\n'), ...sections].join('\n\n');
-  return { text: truncate(text, WHATSAPP_MAX_LENGTH - 1) };
+  return { text: truncate(text, WHATSAPP_MAX_LENGTH - 1), attachments: buildAttachments(sectionData) };
 };
 
 module.exports = { renderWhatsapp, truncate, stripWhatsappFormatting, WHATSAPP_MAX_LENGTH };

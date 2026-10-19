@@ -38,7 +38,10 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 
 ### Content rules
 
-- **No external links.** Messages never contain links. URLs (`http(s)://…`, `www.…`) in `special_date` or `additional_notice` are removed.
+- **Only Time4Torah's own links.** The email links to the day's SHIUR (mp3) and TEXT (pdf) in the bucket, plus the fixed links in `src/services/render/emailLinks.js` (apps, WhatsApp group, website, donate, social) and the provider's unsubscribe link. No Sefaria links. URLs typed into `special_date` or `additional_notice` are still removed.
+- **WhatsApp sends the files, not links.** The text has no URLs; the day's shiur mp3 (`audio`) and text pdf (`document`) come in `message.whatsapp.attachments` as `{ type, url, filename }`, for the provider to fetch by URL. Dry-run output lists them after the text.
+- **Email design** follows the Time4Torah Mailchimp template (`src/templates/dailyEmail.html`): logo banner, shiur with SHIUR/TEXT links, app/WhatsApp links, sign-off, signature, donate links, social links, unsubscribe footer. Fridays add "Have a Good Shabbos!".
+- **Shiur file links** use the same naming as the time4mishna API (`utils/findFile.js`): `<BUCKET_PATH>/mishna/shiurim/<title>.mp3` and `<BUCKET_PATH>/mishna/texts/<title>.pdf`, where `<title>` is `shiur_title` lower-cased with spaces as `_` (e.g. `bava_kama_1:1-1:4`). Only regular Time4Mishna shiurim get links; chazara days and Time4Nach have none yet (the weekly text/summaries need their own generation workflow).
 - **WhatsApp formatting characters** (`*`, `_`, `~`, `` ` ``) are removed from database text, so a notice can't break the message's formatting. Email is not affected.
 - A day with no shiur shows "No shiur today."; a non-regular shiur shows "Chazara".
 - `special_date` and `additional_notice` are shown when present.
@@ -60,6 +63,9 @@ Set these in `.env` (see [`.env.example`](../.env.example)). Unset or blank valu
 | `SEND_PROGRAMS` | `time4mishna,time4nach` | comma-separated `time4mishna`, `time4nach`, `combined` |
 | `OUTBOX_DIR` | `outbox` | folder for dry-run files (gitignored); relative to the working directory |
 | `SENDS_ADMIN_TOKEN` | *(unset → 503)* | bearer token for `/api/v1/sends/*` (API server only, not the job) |
+| `BUCKET_PATH` | *(unset → no SHIUR/TEXT links)* | public base URL of the shiurim bucket; **required for a live send** |
+| `EMAIL_ASSETS_URL` | `<BUCKET_PATH>/email` | where the logo images are (upload `imgs/Time-4-Mishnah-logo_black_NEW.png` and `imgs/Time-4-Torah-logo_NEW.png`); without it the banner shows the title as text |
+| `EMAIL_UNSUBSCRIBE_URL` | *(unset → no footer link)* | the provider's unsubscribe link or merge tag |
 
 The job also needs the usual `DATABASE_*` variables.
 
@@ -179,8 +185,10 @@ Cron treats a non-zero exit as a failure; point `MAILTO` or your monitoring at i
    - keep the interface: `{ name, channel, send(message) → Promise<{ ok, id?, error? }> }`;
    - return the provider's message/campaign id as `id` (it goes into `send_log.provider_message_id`, max 255 characters);
    - return `{ ok: false, error }` for provider errors. Throwing is also handled, but a returned error is clearer.
-4. **Decide the audience model.** The current `DailyMessage` has no recipients. Decide whether the provider sends to a list/segment per program (e.g. one MailerLite group per program) and keep that mapping in config, not code.
-5. **WhatsApp specifics:** business-initiated messages usually need an approved template. Check that the rendered text fits the BSP's template/variable rules, and whether the 1,000-character cap (`WHATSAPP_MAX_LENGTH`) should change.
-6. **Tests:** mock the provider's HTTP client and never call the real API in tests (`npm run test:ci` must stay offline).
-7. **Try it safely first:** send to a test list/number with `SEND_MODE=live` and `--dry-run=false --date=<a test date>`, then check `GET /api/v1/sends/log`.
-8. **Only then** add the cron line with `--dry-run=false`, and keep `SEND_MODE=live` in the server's `.env`.
+4. **Unsubscribe link:** set `EMAIL_UNSUBSCRIBE_URL` to the provider's unsubscribe merge tag (check the provider's docs for the exact tag). Required by law for bulk email.
+5. **Decide the audience model.** The current `DailyMessage` has no recipients. Decide whether the provider sends to a list/segment per program (e.g. one MailerLite group per program) and keep that mapping in config, not code.
+6. **WhatsApp attachments:** send `message.whatsapp.attachments` as media messages (audio + document) by URL. The bucket files must be publicly reachable. Check with the BSP how this works for a broadcast: business-initiated messages need an approved template, and template headers support documents but (as far as we know) not audio, so the mp3 may have to go as a document or as a follow-up message. Also confirm whether the BSP can post to the existing WhatsApp groups or only to individual numbers.
+7. **WhatsApp specifics:** business-initiated messages usually need an approved template. Check that the rendered text fits the BSP's template/variable rules, and whether the 1,000-character cap (`WHATSAPP_MAX_LENGTH`) should change.
+8. **Tests:** mock the provider's HTTP client and never call the real API in tests (`npm run test:ci` must stay offline).
+9. **Try it safely first:** send to a test list/number with `SEND_MODE=live` and `--dry-run=false --date=<a test date>`, then check `GET /api/v1/sends/log`.
+10. **Only then** add the cron line with `--dry-run=false`, and keep `SEND_MODE=live` in the server's `.env`.

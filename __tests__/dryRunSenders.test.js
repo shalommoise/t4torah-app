@@ -118,3 +118,24 @@ describe('default registry', () => {
     ]);
   });
 });
+
+describe('WhatsApp attachments in dry-run senders', () => {
+  const attachments = [
+    { type: 'audio', url: 'https://bucket.test/a.mp3', filename: 'a.mp3' },
+    { type: 'document', url: 'https://bucket.test/a.pdf', filename: 'a.pdf' },
+  ];
+
+  test('console sender reports the attachment count', async () => {
+    const logger = { log: jest.fn() };
+    await createConsoleSender('whatsapp', { logger }).send(message({ whatsapp: { text: 'hi', attachments } }));
+    expect(logger.log).toHaveBeenCalledWith('[dry-run] whatsapp time4mishna 2026-09-28: (2 chars, 2 attachments)');
+  });
+
+  test('file sender lists attachments after the text', async () => {
+    const outboxDir = fs.mkdtempSync(path.join(os.tmpdir(), 'outbox-att-'));
+    const result = await createFileSender('whatsapp', { outboxDir }).send(message({ whatsapp: { text: 'hi', attachments } }));
+    expect(fs.readFileSync(result.id, 'utf8')).toBe(
+      'hi\n\n--- attachments ---\n- audio: a.mp3 (https://bucket.test/a.mp3)\n- document: a.pdf (https://bucket.test/a.pdf)\n'
+    );
+  });
+});

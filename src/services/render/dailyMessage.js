@@ -9,8 +9,27 @@
  * @property {string} date Gregorian date, `YYYY-MM-DD`.
  * @property {DailyMessageProgram} program
  * @property {{ subject: string, html: string, text: string }} email
- * @property {{ text: string }} whatsapp
+ * @property {{ text: string, attachments: WhatsappAttachment[] }} whatsapp
  */
+
+/**
+ * A file sent alongside the WhatsApp text (the provider fetches it by URL).
+ *
+ * @typedef {object} WhatsappAttachment
+ * @property {'audio'|'document'} type
+ * @property {string} url Public URL of the file.
+ * @property {string} filename Name shown to the recipient.
+ */
+
+const ATTACHMENT_TYPES = ['audio', 'document'];
+
+const isValidAttachment = (attachment) =>
+  Boolean(attachment) &&
+  ATTACHMENT_TYPES.includes(attachment.type) &&
+  typeof attachment.url === 'string' &&
+  /^https?:\/\//.test(attachment.url) &&
+  typeof attachment.filename === 'string' &&
+  attachment.filename.length > 0;
 
 /** @type {DailyMessageProgram[]} */
 const PROGRAMS = ['time4mishna', 'time4nach', 'combined'];
@@ -27,7 +46,7 @@ const isString = (value) => typeof value === 'string';
  * @param {string} fields.date
  * @param {DailyMessageProgram} fields.program
  * @param {{ subject: string, html: string, text: string }} fields.email
- * @param {{ text: string }} fields.whatsapp
+ * @param {{ text: string, attachments?: WhatsappAttachment[] }} fields.whatsapp  `attachments` defaults to [].
  * @returns {DailyMessage}
  */
 const createDailyMessage = ({ date, program, email, whatsapp } = {}) => {
@@ -43,12 +62,21 @@ const createDailyMessage = ({ date, program, email, whatsapp } = {}) => {
   if (!whatsapp || !isString(whatsapp.text)) {
     throw new TypeError('DailyMessage.whatsapp must have a string text');
   }
+  const attachments = whatsapp.attachments === undefined ? [] : whatsapp.attachments;
+  if (!Array.isArray(attachments) || !attachments.every(isValidAttachment)) {
+    throw new TypeError(
+      'DailyMessage.whatsapp.attachments must be { type: audio|document, url: http(s) URL, filename } objects'
+    );
+  }
 
   return {
     date,
     program,
     email: { subject: email.subject, html: email.html, text: email.text },
-    whatsapp: { text: whatsapp.text },
+    whatsapp: {
+      text: whatsapp.text,
+      attachments: attachments.map(({ type, url, filename }) => ({ type, url, filename })),
+    },
   };
 };
 

@@ -39,9 +39,21 @@ describe('getSections', () => {
 
   test('builds sections per program, stripping links from notices', () => {
     expect(getSections(content, 'combined')).toEqual([
-      { title: 'Time4Mishna', items: [{ label: 'Brachos 1:1–1:4', notice: null }] },
+      { title: 'Time4Mishna', items: [{ label: 'Brachos 1:1–1:4', notice: null, links: null }] },
       { title: 'Time4Nach', items: [] },
     ]);
     expect(getSections(content, 'time4nach').map((s) => s.title)).toEqual(['Time4Nach']);
+  });
+
+  test('adds SHIUR/TEXT links to regular Time4Mishna items when given a bucket URL', () => {
+    const withTitle = {
+      ...content,
+      time4mishna: [{ ...content.time4mishna[0], shiur_title: 'Bava Kama 1:1-1:4' }],
+    };
+    const [mishna] = getSections(withTitle, 'time4mishna', { bucketUrl: 'https://bucket.test' });
+    expect(mishna.items[0].links).toEqual({
+      audio: 'https://bucket.test/mishna/shiurim/bava_kama_1:1-1:4.mp3',
+      text: 'https://bucket.test/mishna/texts/bava_kama_1:1-1:4.pdf',
+    });
   });
 });
