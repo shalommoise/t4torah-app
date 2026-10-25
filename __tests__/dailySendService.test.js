@@ -422,6 +422,39 @@ describe('runDailySend send claim (G2)', () => {
     });
   });
 
+  test('an uncertain outcome leaves the row claimed (never failed, so never auto-retried)', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([
+      fakeSender('maybe-email', 'email', async () => ({ ok: false, uncertain: true, error: 'schedule timed out' })),
+    ]);
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4mishna'] });
+
+    expect(claimSendLog).toHaveBeenCalledWith(key('time4mishna', 'email'));
+    expect(finishSendLog).not.toHaveBeenCalled();
+    expect(report).toMatchObject({ status: 'failed', ok: false });
+    expect(report.results).toEqual([
+      {
+        program: 'time4mishna',
+        channel: 'email',
+        sender: 'maybe-email',
+        ok: false,
+        uncertain: true,
+        error: 'schedule timed out; outcome unknown, send_log left claimed: check the provider before using --force',
+      },
+    ]);
+  });
+
+  test('a definite failure has no uncertain flag and is recorded as failed', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([fakeSender('bad-email', 'email', async () => ({ ok: false, error: 'draft only' }))]);
+
+    const report = await runDailySend({ date: '2026-09-28', programs: ['time4mishna'] });
+
+    expect(report.results[0]).not.toHaveProperty('uncertain');
+    expect(finishSendLog).toHaveBeenCalledWith(key('time4mishna', 'email'), { status: 'failed', providerMessageId: null });
+  });
+
   test('uses the mode in the key, so a dry-run does not block live', async () => {
     getDailyContent.mockResolvedValue(content());
     getSenders.mockReturnValue([fakeSender('live-email', 'email')]);
@@ -617,13 +650,58 @@ describe('runDailySend with the real dry-run senders', () => {
     expect(logger.log).toHaveBeenCalledTimes(4);
   });
 
-  test('live mode fails every send loudly via the provider stubs', async () => {
+  test('with Mailchimp configured, dry-run also writes the Mailchimp payload (no API calls)', async () => {
     getDailyContent.mockResolvedValue(content());
-    const report = await runDailySend({ date: '2026-09-28', dryRun: false, outboxDir, emailConfig: LIVE_EMAIL_CONFIG });
+    const mailchimp = {
+      apiKey: 'secret-us21',
+      serverPrefix: 'us21',
+      audienceId: 'list1',
+      fromName: 'Time4Mishna',
+      replyTo: 'info@example.org',
+      sendTime: '05:15',
+      sendTimeZone: 'Europe/London',
+    };
+
+    const report = await runDailySend({
+      date: '2026-09-28',
+      channels: ['email'],
+      programs: ['time4mishna'],
+      outboxDir,
+      logger: { log: jest.fn() },
+      mailchimp,
+      emailConfig: { ...LIVE_EMAIL_CONFIG, unsubscribeUrl: '*|UNSUB|*' },
+    });
+
+    expect(report).toMatchObject({ status: 'sent', ok: true, mode: 'dry-run' });
+    expect(report.results.map((r) => r.sender)).toEqual(['console-email', 'file-email', 'mailchimp-preview']);
+    const payload = JSON.parse(
+      fs.readFileSync(path.join(outboxDir, '2026-09-28', 'email-time4mishna.mailchimp.json'), 'utf8')
+    );
+    expect(payload.requests[0].body.settings.subject_line).toBe('Time4Mishna – Monday 28 Sep | 17 Tishrei');
+    expect(payload.requests[1].body.html).toContain('href="*|UNSUB|*"');
+  });
+
+  test('live WhatsApp fails every send loudly via the provider stub', async () => {
+    getDailyContent.mockResolvedValue(content());
+    const report = await runDailySend({
+      date: '2026-09-28',
+      dryRun: false,
+      channels: ['whatsapp'],
+      outboxDir,
+      emailConfig: LIVE_EMAIL_CONFIG,
+    });
     expect(report).toMatchObject({ mode: 'live', status: 'failed', ok: false });
-    expect(report.results).toHaveLength(4);
+    expect(report.results).toHaveLength(2);
     report.results.forEach((result) => expect(result.error).toBe('Not implemented: provider not chosen'));
     expect(fs.readdirSync(outboxDir)).toEqual([]);
+  });
+
+  test('live email without Mailchimp config is refused before claiming send_log', async () => {
+    getDailyContent.mockResolvedValue(content());
+    await expect(
+      runDailySend({ date: '2026-09-28', dryRun: false, channels: ['email'], emailConfig: LIVE_EMAIL_CONFIG })
+    ).rejects.toThrow('Mailchimp sender needs config.mailchimp');
+    expect(claimSendLog).not.toHaveBeenCalled();
   });
 });
 

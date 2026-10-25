@@ -25,6 +25,8 @@ const {
  * @property {string} [error]
  * @property {boolean} [skipped] Already `sent` for this date and mode; not sent again.
  * @property {string} [logError] Sent, but recording the outcome in send_log failed.
+ * @property {boolean} [uncertain] The provider may or may not have accepted it;
+ *   send_log is left `claimed` so it is never resent automatically.
  */
 
 /**
@@ -72,7 +74,12 @@ const sendWith = async (sender, message) => {
     if (result && result.ok) {
       return { ...base, ok: true, ...(result.id !== undefined && { id: result.id }) };
     }
-    return { ...base, ok: false, error: (result && result.error) || 'Sender reported failure' };
+    return {
+      ...base,
+      ok: false,
+      error: (result && result.error) || 'Sender reported failure',
+      ...(result && result.uncertain && { uncertain: true }),
+    };
   } catch (error) {
     return { ...base, ok: false, error: errorMessage(error) };
   }
@@ -80,6 +87,9 @@ const sendWith = async (sender, message) => {
 
 const NEEDS_ATTENTION =
   'needs attention: possibly sent (send_log row is still claimed by another run or an interrupted one); use --force to resend';
+
+const UNCERTAIN =
+  'outcome unknown, send_log left claimed: check the provider before using --force';
 
 /**
  * Claims a send_log key so only one run sends it.
@@ -131,6 +141,10 @@ const sendChannel = async ({ date, program, channel, mode, force, message, chann
   }
 
   const entries = await Promise.all(channelSenders.map((sender) => sendWith(sender, message)));
+  if (entries.some((entry) => entry.uncertain)) {
+    // The provider may have accepted it: leave the row claimed so no run resends it.
+    return entries.map((entry) => (entry.uncertain ? { ...entry, error: `${entry.error}; ${UNCERTAIN}` } : entry));
+  }
   const ids = entries.filter((entry) => entry.ok && entry.id !== undefined).map((entry) => String(entry.id));
   let logError;
   try {
@@ -175,6 +189,8 @@ const getStatus = (results) => {
  * @param {boolean} [options.force=false] Claim and send even if send_log says `sent` or `claimed`.
  * @param {object} [options.emailConfig] Defaults to getEmailConfig(process.env). A live
  *   send needs `bucketUrl` (BUCKET_PATH), or the email would have no shiur links.
+ * @param {object} [options.mailchimp] getMailchimpConfig() output. Needed by the live
+ *   email sender; in dry-run it adds the Mailchimp payload preview.
  * @returns {Promise<SendReport>}
  */
 const runDailySend = async ({
@@ -186,6 +202,7 @@ const runDailySend = async ({
   logger,
   force = false,
   emailConfig = getEmailConfig(process.env),
+  mailchimp,
 } = {}) => {
   const mode = dryRun === false ? 'live' : 'dry-run';
   const report = { date, mode };
@@ -211,7 +228,7 @@ const runDailySend = async ({
     return { ...report, status: 'skipped', ok: true, reason: 'No send on Shabbos or Yom Tov', results: [] };
   }
 
-  const senders = getSenders({ mode, channels, outboxDir, logger });
+  const senders = getSenders({ mode, channels, outboxDir, logger, ...(mailchimp && { mailchimp }) });
 
   const activeChannels = [...new Set(senders.map((sender) => sender.channel))];
   const results = [];

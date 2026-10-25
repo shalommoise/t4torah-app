@@ -1,4 +1,4 @@
-const { TIME_ZONE, londonToday, londonTomorrow, addDays } = require('../src/utils/londonDate');
+const { TIME_ZONE, londonToday, londonTomorrow, addDays, zonedTimeToUtc } = require('../src/utils/londonDate');
 
 // 2026 clock changes in the UK:
 //   29 Mar 01:00 GMT → 02:00 BST
@@ -90,5 +90,28 @@ describe('addDays', () => {
     expect(() => addDays('25/10/2026', 1)).toThrow(TypeError);
     expect(() => addDays('2026-10-25', 1.5)).toThrow(TypeError);
     expect(() => addDays(undefined, 1)).toThrow(TypeError);
+  });
+});
+
+describe('zonedTimeToUtc', () => {
+  test.each([
+    ['2026-01-15', '05:15', '2026-01-15T05:15:00.000Z'], // GMT
+    ['2026-07-01', '05:15', '2026-07-01T04:15:00.000Z'], // BST
+    ['2026-03-29', '05:15', '2026-03-29T04:15:00.000Z'], // clocks went forward at 01:00 GMT
+    ['2026-10-25', '05:15', '2026-10-25T05:15:00.000Z'], // clocks went back at 02:00 BST
+    ['2026-03-28', '05:15', '2026-03-28T05:15:00.000Z'], // the day before BST
+    ['2026-10-24', '05:15', '2026-10-24T04:15:00.000Z'], // the last BST morning
+  ])('%s %s Europe/London → %s', (date, time, expected) => {
+    expect(zonedTimeToUtc(date, time).toISOString()).toBe(expected);
+  });
+
+  test('defaults to Europe/London and accepts other zones', () => {
+    expect(zonedTimeToUtc('2026-07-01', '05:15', TIME_ZONE).toISOString()).toBe('2026-07-01T04:15:00.000Z');
+    expect(zonedTimeToUtc('2026-07-01', '05:15', 'Asia/Jerusalem').toISOString()).toBe('2026-07-01T02:15:00.000Z');
+  });
+
+  test('throws on bad input', () => {
+    expect(() => zonedTimeToUtc('2026-07-01', '5:15')).toThrow(TypeError);
+    expect(() => zonedTimeToUtc('01/07/2026', '05:15')).toThrow(TypeError);
   });
 });
