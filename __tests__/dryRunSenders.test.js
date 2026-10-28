@@ -8,8 +8,8 @@ const { getSenders, assertSender } = require('../src/services/senders');
 const message = (overrides) => ({
   date: '2026-09-28',
   program: 'time4mishna',
-  email: { subject: 'Time4Mishna – Monday 28 Sep | 17 Tishrei', html: '<p>שלום</p>', text: 'Brachos 1:1–1:4\n' },
-  whatsapp: { text: '*Time4Mishna*\n*Brachos 1:1–1:4*' },
+  email: { subject: 'Time4Mishna – Monday 28 Sep | 17 Tishrei', html: '<p>שלום</p>', text: 'Brachos 1.1-1.4\n' },
+  whatsapp: { text: '*Time4Mishna*\n*Brachos 1.1-1.4*' },
   ...overrides,
 });
 
@@ -63,7 +63,7 @@ describe('createFileSender', () => {
     expect(result).toEqual({ ok: true, id: path.join(dayDir, 'email-time4mishna.html') });
     expect(fs.readFileSync(path.join(dayDir, 'email-time4mishna.html'), 'utf8')).toBe('<p>שלום</p>');
     expect(fs.readFileSync(path.join(dayDir, 'email-time4mishna.txt'), 'utf8')).toBe(
-      'Subject: Time4Mishna – Monday 28 Sep | 17 Tishrei\n\nBrachos 1:1–1:4\n'
+      'Subject: Time4Mishna – Monday 28 Sep | 17 Tishrei\n\nBrachos 1.1-1.4\n'
     );
   });
 
@@ -72,7 +72,7 @@ describe('createFileSender', () => {
     const dayDir = path.join(outboxDir, '2026-09-28');
     expect(result).toEqual({ ok: true, id: path.join(dayDir, 'whatsapp-combined.txt') });
     expect(fs.readdirSync(dayDir)).toEqual(['whatsapp-combined.txt']);
-    expect(fs.readFileSync(result.id, 'utf8')).toBe('*Time4Mishna*\n*Brachos 1:1–1:4*');
+    expect(fs.readFileSync(result.id, 'utf8')).toBe('*Time4Mishna*\n*Brachos 1.1-1.4*');
   });
 
   test('overwrites on re-run', async () => {

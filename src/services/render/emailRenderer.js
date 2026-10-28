@@ -10,6 +10,10 @@ const {
 } = require('./dailySections');
 const { STATIC_LINKS, getLogoUrl } = require('./emailLinks');
 
+// Same value as emailExtrasService.NO_EXTRAS; not imported so the renderer
+// doesn't load the HTTP client.
+const NO_EXTRAS = { calendarUrl: null, summaryUrls: [] };
+
 const TEMPLATE = fs.readFileSync(
   path.join(__dirname, '..', '..', 'templates', 'dailyEmail.html'),
   'utf8'
@@ -62,6 +66,9 @@ const renderItemHtml = (item) => {
       `<p style="margin:0;">${link(item.links.audio, 'SHIUR')}<br>${link(item.links.text, 'TEXT')}</p>`
     );
   }
+  if (item.summaries && item.summaries.length) {
+    parts.push(`<p style="margin:0;">${item.summaries.map(({ url, label }) => link(url, label)).join('<br>')}</p>`);
+  }
   if (item.notice) {
     parts.push(`<p style="margin:4px 0 0 0;font-size:15px;color:#8a4b00;">${escapeHtml(item.notice)}</p>`);
   }
@@ -95,6 +102,7 @@ const renderSectionText = ({ title, items }, showTitle) => {
     if (item.links) {
       lines.push(`Shiur: ${item.links.audio}`, `Text: ${item.links.text}`);
     }
+    (item.summaries || []).forEach(({ label, url }) => lines.push(`${label}: ${url}`));
     if (item.notice) {
       lines.push(item.notice);
     }
@@ -109,6 +117,43 @@ const renderLogoHtml = (program, title, assetsUrl) => {
   }
   return `<img src="${escapeHtml(logoUrl)}" width="564" alt="${escapeHtml(title)}" style="display:block;width:100%;max-width:564px;height:auto;border:0;">`;
 };
+
+// Footer buttons, in the order of the manual send. Table cells with a
+// background colour rather than CSS buttons, so they render in Outlook.
+const SOCIAL_BUTTONS = [
+  { name: 'facebook', label: 'Facebook', newTab: true },
+  { name: 'youtube', label: 'YouTube', newTab: true },
+  { name: 'soundcloud', label: 'SoundCloud', newTab: true },
+  { name: 'spotify', label: 'Spotify', newTab: true },
+  { name: 'website', label: 'Website', newTab: true },
+  { name: 'email', label: 'Email us', newTab: false },
+];
+
+const BUTTON_COLOR = '#007C89';
+
+const renderButtonHtml = ({ name, label, newTab }) =>
+  [
+    '<td style="padding:4px;">',
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">',
+    `<tr><td bgcolor="${BUTTON_COLOR}" style="background-color:${BUTTON_COLOR};border-radius:4px;padding:8px 14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:100%;">`,
+    `<a href="${escapeHtml(STATIC_LINKS[name])}"${newTab ? ' target="_blank"' : ''} style="color:#FFFFFF;text-decoration:none;">${escapeHtml(label)}</a>`,
+    '</td></tr>',
+    '</table>',
+    '</td>',
+  ].join('');
+
+// Two rows of three, so the buttons fit a phone screen without wrapping.
+const renderSocialButtonsHtml = () => {
+  const rows = [SOCIAL_BUTTONS.slice(0, 3), SOCIAL_BUTTONS.slice(3)];
+  return [
+    '<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">',
+    ...rows.map((row) => `<tr>${row.map(renderButtonHtml).join('')}</tr>`),
+    '</table>',
+  ].join('\n');
+};
+
+const renderCalendarHtml = (calendarUrl) =>
+  `<p style="margin:24px 0 0 0;"><img src="${escapeHtml(calendarUrl)}" width="564" alt="Time4Mishna learning calendar" style="display:block;width:100%;max-width:564px;height:auto;border:0;"></p>`;
 
 const renderAppLinksHtml = () =>
   [
@@ -126,12 +171,20 @@ const renderAppLinksHtml = () =>
  * fixed Time4Torah links in emailLinks.js, and the unsubscribe link when
  * `unsubscribeUrl` is set. URLs in database text are stripped.
  *
+ * `extras` (from emailExtrasService.getEmailExtras) adds the files found in
+ * the bucket: the Overview/Key Terms links under each Time4Mishna shiur and
+ * the calendar image. Both only appear in emails that include Time4Mishna.
+ *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
  * @param {{ program: 'time4mishna'|'time4nach'|'combined', bucketUrl?: string|null,
- *   assetsUrl?: string|null, unsubscribeUrl?: string|null }} options
+ *   assetsUrl?: string|null, unsubscribeUrl?: string|null,
+ *   extras?: { calendarUrl: string|null, summaryUrls: string[] } }} options
  * @returns {{ html: string, text: string }}
  */
-const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, unsubscribeUrl = null }) => {
+const renderEmail = (
+  content,
+  { program, bucketUrl = null, assetsUrl = null, unsubscribeUrl = null, extras = NO_EXTRAS }
+) => {
   assertRenderable(content, program);
 
   const dateRow = content.date;
@@ -139,7 +192,8 @@ const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, uns
   const studyName = STUDY_NAMES[program];
   const gregorianDate = formatGregorianDate(dateRow.gregorian_date);
   const specialDate = stripLinks(dateRow.special_date);
-  const sections = getSections(content, program, { bucketUrl });
+  const sections = getSections(content, program, { bucketUrl, summaryUrls: extras.summaryUrls });
+  const calendarUrl = includesMishna(program) ? extras.calendarUrl : null;
   const showTitles = program === 'combined';
   const hasFileLinks = sections.some((section) => section.items.some((item) => item.links));
   const isFriday = dateRow.day_of_week === 'Friday';
@@ -162,7 +216,9 @@ const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, uns
       : '',
     intro: intro ? `<p style="margin:24px 0 0 0;">${escapeHtml(intro)}</p>` : '',
     sections: sections.map((section) => renderSectionHtml(section, showTitles)).join('\n'),
+    calendar: calendarUrl ? renderCalendarHtml(calendarUrl) : '',
     appLinks: includesMishna(program) ? renderAppLinksHtml() : '',
+    socialButtons: renderSocialButtonsHtml(),
     shabbosGreeting: isFriday ? '<br>Have a Good Shabbos!' : '',
     unsubscribe: unsubscribeUrl
       ? `Want to change how you receive these emails?<br>You can ${link(unsubscribeUrl, 'unsubscribe from this list', 'color:#656565;text-decoration:underline;')}.`
@@ -199,6 +255,7 @@ const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, uns
     headerLines.join('\n'),
     intro,
     ...sections.map((section) => renderSectionText(section, showTitles)),
+    calendarUrl ? `Calendar: ${calendarUrl}` : null,
     appLines,
     signOff.join('\n'),
     unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : null,

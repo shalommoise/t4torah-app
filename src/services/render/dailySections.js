@@ -3,7 +3,7 @@ const {
   formatNachShiurLabel,
   getAdditionalNotice,
 } = require('../shiurLabelService');
-const { buildMishnaShiurLinks } = require('./emailLinks');
+const { buildMishnaShiurLinks, getSummaryLinks } = require('./emailLinks');
 
 // Shared by the email and WhatsApp renderers.
 
@@ -53,12 +53,13 @@ const formatGregorianDate = (gregorianDate) => {
   return `${weekday} ${rest}`;
 };
 
-const toShiurItems = (rows, formatLabel, buildLinks = () => null) =>
+const toShiurItems = (rows, formatLabel, buildLinks = () => null, buildSummaries = () => []) =>
   (rows || [])
     .map((row) => ({
       label: formatLabel(row),
       notice: stripLinks(getAdditionalNotice(row)),
       links: buildLinks(row),
+      summaries: buildSummaries(row),
     }))
     .filter((item) => item.label || item.notice);
 
@@ -69,19 +70,26 @@ const toShiurItems = (rows, formatLabel, buildLinks = () => null) =>
  * With `bucketUrl`, regular Time4Mishna items get `links` ({ audio, text });
  * every other item has `links: null`. Time4Nach has no file links yet.
  *
+ * Time4Mishna items also get `summaries`: their masechta's Overview and Key
+ * Terms links, keeping only URLs listed in `summaryUrls` (the files found in
+ * the bucket). Every other item has `summaries: []`.
+ *
  * @param {{ time4mishna: object[], time4nach: object[] }} content
  * @param {'time4mishna'|'time4nach'|'combined'} program
- * @param {{ bucketUrl?: string|null }} [options]
+ * @param {{ bucketUrl?: string|null, summaryUrls?: string[] }} [options]
  * @returns {{ title: string, items: { label: string|null, notice: string|null,
- *   links: { audio: string, text: string }|null }[] }[]}
+ *   links: { audio: string, text: string }|null, summaries: { label: string, url: string }[] }[] }[]}
  */
-const getSections = (content, program, { bucketUrl = null } = {}) => {
+const getSections = (content, program, { bucketUrl = null, summaryUrls = [] } = {}) => {
   const sections = [];
   if (program === 'time4mishna' || program === 'combined') {
     sections.push({
       title: PROGRAM_TITLES.time4mishna,
-      items: toShiurItems(content.time4mishna, formatMishnaShiurLabel, (row) =>
-        buildMishnaShiurLinks(row, bucketUrl)
+      items: toShiurItems(
+        content.time4mishna,
+        formatMishnaShiurLabel,
+        (row) => buildMishnaShiurLinks(row, bucketUrl),
+        (row) => getSummaryLinks(row, bucketUrl).filter((summary) => summaryUrls.includes(summary.url))
       ),
     });
   }

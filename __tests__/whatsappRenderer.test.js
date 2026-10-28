@@ -54,7 +54,7 @@ describe('renderWhatsapp', () => {
         '17 Tishrei 5787',
         'י״ז תשרי תשפ״ז',
         '',
-        '*Brachos 1:1–1:4*',
+        '*Brachos 1.1-1.4*',
       ].join('\n')
     );
   });
@@ -69,7 +69,7 @@ describe('renderWhatsapp', () => {
   test('combined message has a bold title per section', () => {
     const { text } = renderWhatsapp(content(), { program: 'combined' });
     expect(text).toContain('*Time4Mishna & Time4Nach*');
-    expect(text).toContain('\n\n*Time4Mishna*\n*Brachos 1:1–1:4*');
+    expect(text).toContain('\n\n*Time4Mishna*\n*Brachos 1.1-1.4*');
     expect(text).toContain('\n\n*Time4Nach*\n*Tehillim 42*');
   });
 
@@ -82,7 +82,7 @@ describe('renderWhatsapp', () => {
       { program: 'time4mishna' }
     );
     expect(text).toContain('\n_Chol HaMoed Sukkos_\n');
-    expect(text).toContain('*Brachos 1:1–1:4*\n_Siyum tomorrow!_');
+    expect(text).toContain('*Brachos 1.1-1.4*\n_Siyum tomorrow!_');
   });
 
   test('no-shiur day and chazara', () => {

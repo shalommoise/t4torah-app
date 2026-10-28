@@ -20,7 +20,7 @@ const STATIC_LINKS = {
 // Images expected in the assets folder (EMAIL_ASSETS_URL, default <bucket>/email),
 // uploaded from the repo's imgs/ folder.
 const LOGO_FILES = {
-  time4mishna: 'Time-4-Mishnah-logo_black_NEW.png',
+  time4mishna: 'time4mishna-header_logo.png',
   time4nach: 'Time-4-Torah-logo_NEW.png',
   combined: 'Time-4-Torah-logo_NEW.png',
 };
@@ -63,4 +63,75 @@ const buildMishnaShiurLinks = (scheduleRow, bucketUrl) => {
 const getLogoUrl = (program, assetsUrl) =>
   assetsUrl && LOGO_FILES[program] ? `${assetsUrl}/${LOGO_FILES[program]}` : null;
 
-module.exports = { STATIC_LINKS, LOGO_FILES, shiurFileName, buildMishnaShiurLinks, getLogoUrl };
+/**
+ * The monthly Time4Mishna calendar image for a date, e.g. `2026-10-26` →
+ * `<bucket>/mishna/calendars/T4M-10-26.png` (month, then two-digit year).
+ * `null` without a bucket URL or a YYYY-MM-DD date.
+ *
+ * @param {string} gregorianDate
+ * @param {string|null} bucketUrl
+ * @returns {string|null}
+ */
+const getCalendarUrl = (gregorianDate, bucketUrl) => {
+  const match = /^\d{2}(\d{2})-(\d{2})-\d{2}$/.exec(gregorianDate || '');
+  if (!bucketUrl || !match) {
+    return null;
+  }
+  return `${bucketUrl}/mishna/calendars/T4M-${match[2]}-${match[1]}.png`;
+};
+
+const SUMMARY_FILES = [
+  { suffix: 'Overview', label: 'OVERVIEW' },
+  { suffix: 'Key-Terms', label: 'KEY TERMS' },
+];
+
+/**
+ * The masechtos a regular Time4Mishna shiur covers (one, or two when it
+ * crosses into the next masechta). Empty for chazara and incomplete rows.
+ *
+ * @param {object|null|undefined} scheduleRow
+ * @returns {string[]}
+ */
+const getRowMasechtos = (scheduleRow) => {
+  if (!scheduleRow || scheduleRow.shiur_type !== 'regular') {
+    return [];
+  }
+  const names = [scheduleRow.start_masechta_name, scheduleRow.end_masechta_name].filter(Boolean);
+  return [...new Set(names)];
+};
+
+/**
+ * Overview and Key Terms PDF links for a regular Time4Mishna shiur:
+ * `<bucket>/mishna/summaries/Bava-Kama-Overview.pdf` and `...-Key-Terms.pdf`
+ * (spaces in the masechta name become hyphens). When the shiur crosses two
+ * masechtos, each label is prefixed with its masechta. These are candidates:
+ * the caller checks which files exist (see emailExtrasService).
+ *
+ * @param {object|null|undefined} scheduleRow
+ * @param {string|null} bucketUrl
+ * @returns {{ label: string, url: string }[]}
+ */
+const getSummaryLinks = (scheduleRow, bucketUrl) => {
+  if (!bucketUrl) {
+    return [];
+  }
+  const masechtos = getRowMasechtos(scheduleRow);
+  return masechtos.flatMap((masechta) => {
+    const fileBase = encodeURI(String(masechta).trim().split(/\s+/).join('-'));
+    const prefix = masechtos.length > 1 ? `${masechta.toUpperCase()} ` : '';
+    return SUMMARY_FILES.map(({ suffix, label }) => ({
+      label: `${prefix}${label}`,
+      url: `${bucketUrl}/mishna/summaries/${fileBase}-${suffix}.pdf`,
+    }));
+  });
+};
+
+module.exports = {
+  STATIC_LINKS,
+  LOGO_FILES,
+  shiurFileName,
+  buildMishnaShiurLinks,
+  getLogoUrl,
+  getCalendarUrl,
+  getSummaryLinks,
+};

@@ -39,7 +39,7 @@ describe('getSections', () => {
 
   test('builds sections per program, stripping links from notices', () => {
     expect(getSections(content, 'combined')).toEqual([
-      { title: 'Time4Mishna', items: [{ label: 'Brachos 1:1–1:4', notice: null, links: null }] },
+      { title: 'Time4Mishna', items: [{ label: 'Brachos 1.1-1.4', notice: null, links: null, summaries: [] }] },
       { title: 'Time4Nach', items: [] },
     ]);
     expect(getSections(content, 'time4nach').map((s) => s.title)).toEqual(['Time4Nach']);

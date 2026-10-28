@@ -7,6 +7,7 @@ const { createDailyMessage } = require('./render/dailyMessage');
 const { renderEmail } = require('./render/emailRenderer');
 const { renderWhatsapp } = require('./render/whatsappRenderer');
 const { buildSubject } = require('./render/subjectLine');
+const { getEmailExtras } = require('./emailExtrasService');
 const {
   claimSendLog,
   reclaimFailedSendLog,
@@ -50,15 +51,17 @@ const errorMessage = (error) => (error && error.message) || String(error);
  * @param {'time4mishna'|'time4nach'|'combined'} program
  * @param {{ bucketUrl: string|null, assetsUrl: string|null, unsubscribeUrl: string|null }} [emailConfig]
  *   Defaults to getEmailConfig(process.env).
+ * @param {{ calendarUrl: string|null, summaryUrls: string[] }} [extras] getEmailExtras output;
+ *   without it the email has no calendar or summary links.
  * @returns {import('./render/dailyMessage').DailyMessage}
  */
-const renderDailyMessage = (content, program, emailConfig = getEmailConfig(process.env)) =>
+const renderDailyMessage = (content, program, emailConfig = getEmailConfig(process.env), extras) =>
   createDailyMessage({
     date: content.date.gregorian_date,
     program,
     email: {
       subject: buildSubject(content.date, program),
-      ...renderEmail(content, { program, ...emailConfig }),
+      ...renderEmail(content, { program, ...emailConfig, ...(extras && { extras }) }),
     },
     whatsapp: renderWhatsapp(content, { program, bucketUrl: emailConfig.bucketUrl }),
   });
@@ -231,11 +234,12 @@ const runDailySend = async ({
   const senders = getSenders({ mode, channels, outboxDir, logger, ...(mailchimp && { mailchimp }) });
 
   const activeChannels = [...new Set(senders.map((sender) => sender.channel))];
+  const extras = await getEmailExtras(content, emailConfig);
   const results = [];
   for (const program of programs) {
     let message;
     try {
-      message = renderDailyMessage(content, program, emailConfig);
+      message = renderDailyMessage(content, program, emailConfig, extras);
     } catch (error) {
       senders.forEach((sender) =>
         results.push({ program, channel: sender.channel, sender: null, ok: false, error: `Render failed: ${errorMessage(error)}` })
