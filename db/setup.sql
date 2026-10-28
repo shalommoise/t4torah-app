@@ -36,6 +36,7 @@ CREATE TABLE mishnayos_table (
     perek INT NOT NULL,
     mishna INT NOT NULL,
     mishna_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    needs_diagram BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (mishna_id),
     FOREIGN KEY (masechta_id) REFERENCES masechta_table(masechta_id)
 ) CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
@@ -131,3 +132,26 @@ CREATE TABLE send_log (
   PRIMARY KEY (send_log_id),
   UNIQUE KEY send_log_once (send_date, program, channel, mode)
 );
+
+-- Summary sheets (feature/summary-sheets); see db/migrations/001_summary_sheets.sql.
+-- One row per summary/diagram PDF in the bucket, covering the mishnayos
+-- start_mishna..end_mishna (mishna_id is in learning order, so a range can
+-- cross perakim). Several files on the same range are ordered by `part`.
+-- bucket_key is derived from masechta, kind, range and part, so re-importing
+-- the same inventory row updates it instead of adding a duplicate.
+CREATE TABLE summary_sheets (
+  summary_sheet_id INT NOT NULL AUTO_INCREMENT,
+  kind ENUM('summary', 'diagram', 'chart', 'overview', 'key_terms', 'cover', 'mikra', 'test', 'back_matter') NOT NULL,
+  start_mishna INT NOT NULL,
+  end_mishna INT NOT NULL,
+  part INT NOT NULL DEFAULT 1,
+  bucket_key VARCHAR(255) NOT NULL,
+  source_ref VARCHAR(500),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (summary_sheet_id),
+  UNIQUE KEY summary_sheets_bucket_key (bucket_key),
+  KEY summary_sheets_range (start_mishna, end_mishna),
+  FOREIGN KEY (start_mishna) REFERENCES mishnayos_table(mishna_id),
+  FOREIGN KEY (end_mishna) REFERENCES mishnayos_table(mishna_id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
