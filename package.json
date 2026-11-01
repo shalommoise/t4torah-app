@@ -11,7 +11,8 @@
     "seed": "node ./db/seed.js",
     "test:ci": "NODE_OPTIONS=--localstorage-file=/tmp/jest-localstorage jest --testPathIgnorePatterns=/__tests__/integration/",
     "test:integration": "NODE_OPTIONS=--localstorage-file=/tmp/jest-localstorage jest __tests__/integration",
-    "send:daily": "node ./jobs/dailySend.js"
+    "send:daily": "node ./jobs/dailySend.js",
+    "import:summaries": "node ./jobs/importSummarySheets.js"
   },
   "repository": {
     "type": "git",
