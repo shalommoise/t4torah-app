@@ -188,10 +188,11 @@ describe('renderEmail', () => {
       program: 'time4mishna',
       bucketUrl: BUCKET,
     });
-    expect(html).toContain(`href="${BUCKET}/mishna/shiurim/bava_kama_1:1-1:4.mp3"`);
-    expect(html).toContain(`href="${BUCKET}/mishna/texts/bava_kama_1:1-1:4.pdf"`);
+    expect(html).toContain(`href="${BUCKET}/mishna/shiurim/bava_kama_1:1-1:4.mp3" target="_blank" style="color:#007C89;text-decoration:underline;">Brachos 1.1-1.4 SHIUR</a>`);
+    expect(html).toContain(`href="${BUCKET}/mishna/texts/bava_kama_1:1-1:4.pdf" target="_blank" style="color:#007C89;text-decoration:underline;">Brachos 1.1-1.4 TEXT</a>`);
     expect(html).toContain('Please find attached the Shiur and Text for today&#39;s Mishnayos:');
-    expect(text).toContain(`Shiur: ${BUCKET}/mishna/shiurim/bava_kama_1:1-1:4.mp3`);
+    expect(text).toContain(`Brachos 1.1-1.4 SHIUR (${BUCKET}/mishna/shiurim/bava_kama_1:1-1:4.mp3)`);
+    expect(text).toContain(`Brachos 1.1-1.4 TEXT (${BUCKET}/mishna/texts/bava_kama_1:1-1:4.pdf)`);
   });
 
   test('links match the time4mishna controller file naming (formFileName)', () => {
@@ -223,7 +224,8 @@ describe('renderEmail', () => {
     const withLogo = renderEmail(content(), { program: 'time4mishna', assetsUrl: `${BUCKET}/email` });
     expect(withLogo.html).toContain(`src="${BUCKET}/email/time4mishna-header_logo.png"`);
     const noLogo = renderEmail(content(), { program: 'time4mishna' });
-    expect(noLogo.html).not.toContain('<img');
+    expect(noLogo.html).not.toContain('header_logo');
+    expect(noLogo.html).toMatch(/font-size:28px;font-weight:bold;color:#FFFFFF;">Time4Mishna<\/p>/);
   });
 
   test('adds "Have a Good Shabbos!" on Fridays only', () => {
@@ -244,14 +246,14 @@ describe('renderEmail', () => {
     const keyTerms = `${BUCKET}/mishna/summaries/Brachos-Key-Terms.pdf`;
     const extras = { calendarUrl, summaryUrls: [overview, keyTerms] };
 
-    test('adds Overview and Key Terms under SHIUR/TEXT, styled like them', () => {
+    test('adds "<masechta> Overview" and "<masechta> Key Terms" under SHIUR/TEXT, styled like them', () => {
       const { html, text } = renderEmail(content(), { program: 'time4mishna', bucketUrl: BUCKET, extras });
       expect(html).toMatch(
         new RegExp(
-          `>TEXT</a></p>\\n<p style="margin:0;"><a href="${overview}" target="_blank" style="color:#007C89;text-decoration:underline;">OVERVIEW</a><br><a href="${keyTerms}" [^>]*>KEY TERMS</a></p>`
+          `TEXT</a></p>\\n<p style="margin:16px 0 0 0;"><a href="${overview}" target="_blank" style="color:#007C89;text-decoration:underline;">Brachos Overview</a><br><a href="${keyTerms}" [^>]*>Brachos Key Terms</a></p>`
         )
       );
-      expect(text).toContain(`OVERVIEW: ${overview}\nKEY TERMS: ${keyTerms}`);
+      expect(text).toContain(`Brachos Overview (${overview})\nBrachos Key Terms (${keyTerms})`);
     });
 
     test('shows only the summaries that were found', () => {
@@ -260,23 +262,25 @@ describe('renderEmail', () => {
         bucketUrl: BUCKET,
         extras: { calendarUrl: null, summaryUrls: [keyTerms] },
       });
-      expect(html).not.toContain('OVERVIEW');
-      expect(html).toContain('KEY TERMS');
+      expect(html).not.toContain('Overview');
+      expect(html).toContain('Brachos Key Terms');
     });
 
-    test('puts the calendar after the shiurim and before the app links', () => {
+    test('puts the calendar below the donation lines and above the footer icons, as in the manual send', () => {
       const { html, text } = renderEmail(content(), { program: 'time4mishna', bucketUrl: BUCKET, extras });
-      const calendarAt = html.indexOf(`<img src="${calendarUrl}" width="564" alt="Time4Mishna learning calendar"`);
-      expect(calendarAt).toBeGreaterThan(html.indexOf('KEY TERMS'));
-      expect(calendarAt).toBeLessThan(html.indexOf('Want Time4Mishna straight to your phone?'));
-      expect(text).toContain(`Calendar: ${calendarUrl}`);
+      const calendarAt = html.indexOf(
+        `<a href="${calendarUrl}" target="_blank"><img src="${calendarUrl}" width="564" alt="Time4Mishna learning calendar"`
+      );
+      expect(calendarAt).toBeGreaterThan(html.indexOf('please make sure to write Time4Torah in the message'));
+      expect(calendarAt).toBeLessThan(html.indexOf('alt="Facebook"'));
+      expect(text).toMatch(new RegExp(`write Time4Torah in the message\\.\\)\\n\\nCalendar: ${calendarUrl}`));
     });
 
     test('no calendar in a Time4Nach email, and nothing without extras', () => {
       expect(renderEmail(content(), { program: 'time4nach', bucketUrl: BUCKET, extras }).html).not.toContain('T4M-');
       const { html } = renderEmail(content(), { program: 'time4mishna', bucketUrl: BUCKET });
       expect(html).not.toContain('T4M-');
-      expect(html).not.toContain('OVERVIEW');
+      expect(html).not.toContain('Overview');
     });
   });
 
@@ -288,22 +292,32 @@ describe('renderEmail', () => {
     expect(html).not.toContain('text-align:right');
   });
 
-  test('footer social links are table-based buttons with unchanged links', () => {
+  test('footer has linked social icons in the manual send order, without SoundCloud', () => {
     const { html } = renderEmail(content(), { program: 'time4mishna' });
-    const buttons = [
-      ['facebook', 'Facebook'],
-      ['youtube', 'YouTube'],
-      ['soundcloud', 'SoundCloud'],
-      ['spotify', 'Spotify'],
-      ['website', 'Website'],
+    const icons = [
+      ['facebook', 'Facebook', 'color-facebook-48.png'],
+      ['email', 'Email', 'color-forwardtofriend-48.png'],
+      ['website', 'Website', 'color-link-48.png'],
+      ['youtube', 'YouTube', 'color-youtube-48.png'],
+      ['spotify', 'Spotify', 'color-spotify-48.png'],
     ];
-    buttons.forEach(([name, label]) => {
-      expect(html).toContain(
-        `<td bgcolor="#007C89" style="background-color:#007C89;border-radius:4px;padding:8px 14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:100%;"><a href="${STATIC_LINKS[name]}" target="_blank" style="color:#FFFFFF;text-decoration:none;">${label}</a>`
-      );
+    const positions = icons.map(([name, label, icon]) => {
+      const tag = `<a href="${STATIC_LINKS[name]}" target="_blank"><img src="https://cdn-images.mailchimp.com/icons/social-block-v2/${icon}" alt="${label}" width="24" height="24"`;
+      expect(html).toContain(tag);
+      return html.indexOf(tag);
     });
-    expect(html).toContain(`<a href="${STATIC_LINKS.email}" style="color:#FFFFFF;text-decoration:none;">Email us</a>`);
-    expect(html).not.toContain('&nbsp;&middot;&nbsp;');
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(STATIC_LINKS.spotify).toBe('https://open.spotify.com/show/4MkWuh0AW64I7OdXeSNFWN');
+    expect(html).not.toMatch(/soundcloud/i);
+  });
+
+  test('donate link passes the recipient details as URL-encoded Mailchimp merge tags', () => {
+    const { html, text } = renderEmail(content(), { program: 'time4mishna' });
+    const donate =
+      'https://donate.jfutures.org/?message=I%20am%20supporting%20Time4Mishnah-Time4Nach' +
+      '&email=*|URL:EMAIL|*&firstname=*|URL:FNAME|*&surname=*|URL:LNAME|*';
+    expect(html).toContain(`href="${donate.replace(/&/g, '&amp;')}"`);
+    expect(text).toContain(`Donate to Time4Mishna: ${donate}`);
   });
 
   test('includes the unsubscribe footer only when configured', () => {

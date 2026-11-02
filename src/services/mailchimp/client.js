@@ -1,8 +1,8 @@
 const axios = require('axios');
 
-// Thin wrapper over the four Mailchimp Marketing API calls the daily send
-// needs. 429 and 5xx responses are retried with exponential backoff; anything
-// else (4xx, network errors) fails at once with a MailchimpError.
+// Thin wrapper over the Mailchimp Marketing API calls the daily send and the
+// test send need. 429 and 5xx responses are retried with exponential backoff;
+// anything else (4xx, network errors) fails at once with a MailchimpError.
 
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_BASE_DELAY_MS = 1000;
@@ -109,6 +109,11 @@ const createMailchimpClient = ({
     sendCampaign: (campaignId) => call('POST', `${campaignPath(campaignId)}/actions/send`),
     /** GET /campaigns/{id} → includes `status` and `recipients.recipient_count`. */
     getCampaign: (campaignId) => call('GET', campaignPath(campaignId)),
+    /** POST /campaigns/{id}/actions/test: sends the draft to `emails` only, never the audience. */
+    sendTestEmail: (campaignId, emails) =>
+      call('POST', `${campaignPath(campaignId)}/actions/test`, { test_emails: emails, send_type: 'html' }),
+    /** DELETE /campaigns/{id} (drafts only). */
+    deleteCampaign: (campaignId) => call('DELETE', campaignPath(campaignId)),
   };
 };
 

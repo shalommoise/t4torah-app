@@ -23,6 +23,8 @@ describe('requests', () => {
     await client.scheduleCampaign('c1', new Date('2026-10-19T04:15:00Z'));
     await client.sendCampaign('c1');
     await client.getCampaign('c1');
+    await client.sendTestEmail('c1', ['me@example.org']);
+    await client.deleteCampaign('c1');
 
     expect(request.mock.calls.map(([config]) => [config.method, config.url, config.data])).toEqual([
       ['POST', '/campaigns', { type: 'regular' }],
@@ -30,6 +32,8 @@ describe('requests', () => {
       ['POST', '/campaigns/c1/actions/schedule', { schedule_time: '2026-10-19T04:15:00.000Z' }],
       ['POST', '/campaigns/c1/actions/send', undefined],
       ['GET', '/campaigns/c1', undefined],
+      ['POST', '/campaigns/c1/actions/test', { test_emails: ['me@example.org'], send_type: 'html' }],
+      ['DELETE', '/campaigns/c1', undefined],
     ]);
     request.mock.calls.forEach(([config]) => {
       expect(config.baseURL).toBe('https://us21.api.mailchimp.com/3.0');

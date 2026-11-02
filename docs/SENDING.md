@@ -27,7 +27,7 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 | Labels | `src/services/shiurLabelService.js` | `Brachos 1:1–1:4`, `Brachos 9:5 – Peah 1:3`, `Tehillim 42`, `Chazara`. |
 | Shared sections | `src/services/render/dailySections.js` | Per-program sections, date formatting, `stripLinks`. |
 | Message model | `src/services/render/dailyMessage.js` | `DailyMessage = { date, program, email: { subject, html, text }, whatsapp: { text } }`. |
-| Subject | `src/services/render/subjectLine.js` | `SUBJECT_FORMAT`, e.g. `Time4Mishna – Monday 28 Sep | 17 Tishrei | Chol HaMoed Sukkos`. Empty parts are dropped. |
+| Subject | `src/services/render/subjectLine.js` | `SUBJECT_FORMAT`, matching the manual send: e.g. `Shabbos 17.3-17.6 (Wed 28 Oct)`, plus ` \| Chol HaMoed Sukkos` on a special date. Without a shiur label it uses the program title. |
 | Email | `src/services/render/emailRenderer.js` | `{{token}}` template, inline CSS, 600px max width, Hebrew date in `dir="rtl"`. |
 | WhatsApp | `src/services/render/whatsappRenderer.js` | `*bold*` / `_italic_`, under 1,000 characters (truncated with `…`). |
 | Senders | `src/services/senders/` | `index.js` (interface, registry, `getSenders`), `consoleSender.js`, `fileSender.js`, `mailchimpSender.js` (live email + dry-run preview), `providerSenders.js` (WhatsApp stub). |
@@ -77,9 +77,9 @@ Emails that include Time4Mishna add these when they are in `BUCKET_PATH`, and le
 
 | File | Path in the bucket | Shown |
 |---|---|---|
-| Monthly calendar | `mishna/calendars/T4M-<MM>-<YY>.png` (e.g. `T4M-10-26.png` for October 2026) | image after the shiurim, before the app links |
-| Masechta overview | `mishna/summaries/<Masechta>-Overview.pdf` (spaces → hyphens, e.g. `Bava-Kama-Overview.pdf`) | OVERVIEW link under SHIUR/TEXT |
-| Masechta key terms | `mishna/summaries/<Masechta>-Key-Terms.pdf` | KEY TERMS link under SHIUR/TEXT |
+| Monthly calendar | `mishna/calendars/T4M-<MM>-<YY>.png` (e.g. `T4M-10-26.png` for October 2026) | linked image below the donation lines, above the footer icons |
+| Masechta overview | `mishna/summaries/<Masechta>-Overview.pdf` (spaces → hyphens, e.g. `Bava-Kama-Overview.pdf`) | `<Masechta> Overview` link under SHIUR/TEXT |
+| Masechta key terms | `mishna/summaries/<Masechta>-Key-Terms.pdf` | `<Masechta> Key Terms` link under SHIUR/TEXT |
 
 The masechta name is spelled as in `masechta_table`.
 

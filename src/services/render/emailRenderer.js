@@ -56,6 +56,9 @@ const includesMishna = (program) => program === 'time4mishna' || program === 'co
 const link = (href, label, style = LINK_STYLE) =>
   `<a href="${escapeHtml(href)}" target="_blank" style="${style}">${escapeHtml(label)}</a>`;
 
+// `Shabbos 17.3-17.6 SHIUR`, as in the manual send.
+const fileLabel = (item, kind) => (item.label ? `${item.label} ${kind}` : kind);
+
 const renderItemHtml = (item) => {
   const parts = [];
   if (item.label) {
@@ -63,11 +66,11 @@ const renderItemHtml = (item) => {
   }
   if (item.links) {
     parts.push(
-      `<p style="margin:0;">${link(item.links.audio, 'SHIUR')}<br>${link(item.links.text, 'TEXT')}</p>`
+      `<p style="margin:0;">${link(item.links.audio, fileLabel(item, 'SHIUR'))}<br>${link(item.links.text, fileLabel(item, 'TEXT'))}</p>`
     );
   }
   if (item.summaries && item.summaries.length) {
-    parts.push(`<p style="margin:0;">${item.summaries.map(({ url, label }) => link(url, label)).join('<br>')}</p>`);
+    parts.push(`<p style="margin:16px 0 0 0;">${item.summaries.map(({ url, label }) => link(url, label)).join('<br>')}</p>`);
   }
   if (item.notice) {
     parts.push(`<p style="margin:4px 0 0 0;font-size:15px;color:#8a4b00;">${escapeHtml(item.notice)}</p>`);
@@ -100,9 +103,9 @@ const renderSectionText = ({ title, items }, showTitle) => {
       lines.push(item.label);
     }
     if (item.links) {
-      lines.push(`Shiur: ${item.links.audio}`, `Text: ${item.links.text}`);
+      lines.push(`${fileLabel(item, 'SHIUR')} (${item.links.audio})`, `${fileLabel(item, 'TEXT')} (${item.links.text})`);
     }
-    (item.summaries || []).forEach(({ label, url }) => lines.push(`${label}: ${url}`));
+    (item.summaries || []).forEach(({ label, url }) => lines.push(`${label} (${url})`));
     if (item.notice) {
       lines.push(item.notice);
     }
@@ -118,42 +121,31 @@ const renderLogoHtml = (program, title, assetsUrl) => {
   return `<img src="${escapeHtml(logoUrl)}" width="564" alt="${escapeHtml(title)}" style="display:block;width:100%;max-width:564px;height:auto;border:0;">`;
 };
 
-// Footer buttons, in the order of the manual send. Table cells with a
-// background colour rather than CSS buttons, so they render in Outlook.
-const SOCIAL_BUTTONS = [
-  { name: 'facebook', label: 'Facebook', newTab: true },
-  { name: 'youtube', label: 'YouTube', newTab: true },
-  { name: 'soundcloud', label: 'SoundCloud', newTab: true },
-  { name: 'spotify', label: 'Spotify', newTab: true },
-  { name: 'website', label: 'Website', newTab: true },
-  { name: 'email', label: 'Email us', newTab: false },
+// Footer social icons: the same icons and order as the manual send's
+// Mailchimp follow block. One table row, so they render in Outlook.
+const SOCIAL_ICON_BASE = 'https://cdn-images.mailchimp.com/icons/social-block-v2';
+const SOCIAL_ICONS = [
+  { name: 'facebook', label: 'Facebook', icon: 'color-facebook-48.png' },
+  { name: 'email', label: 'Email', icon: 'color-forwardtofriend-48.png' },
+  { name: 'website', label: 'Website', icon: 'color-link-48.png' },
+  { name: 'youtube', label: 'YouTube', icon: 'color-youtube-48.png' },
+  { name: 'spotify', label: 'Spotify', icon: 'color-spotify-48.png' },
 ];
 
-const BUTTON_COLOR = '#007C89';
+const renderSocialIconHtml = ({ name, label, icon }) =>
+  `<td style="padding:0 9px;"><a href="${escapeHtml(STATIC_LINKS[name])}" target="_blank">` +
+  `<img src="${SOCIAL_ICON_BASE}/${icon}" alt="${escapeHtml(label)}" width="24" height="24" style="display:block;border:0;"></a></td>`;
 
-const renderButtonHtml = ({ name, label, newTab }) =>
+const renderSocialIconsHtml = () =>
   [
-    '<td style="padding:4px;">',
-    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">',
-    `<tr><td bgcolor="${BUTTON_COLOR}" style="background-color:${BUTTON_COLOR};border-radius:4px;padding:8px 14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:100%;">`,
-    `<a href="${escapeHtml(STATIC_LINKS[name])}"${newTab ? ' target="_blank"' : ''} style="color:#FFFFFF;text-decoration:none;">${escapeHtml(label)}</a>`,
-    '</td></tr>',
-    '</table>',
-    '</td>',
-  ].join('');
-
-// Two rows of three, so the buttons fit a phone screen without wrapping.
-const renderSocialButtonsHtml = () => {
-  const rows = [SOCIAL_BUTTONS.slice(0, 3), SOCIAL_BUTTONS.slice(3)];
-  return [
     '<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">',
-    ...rows.map((row) => `<tr>${row.map(renderButtonHtml).join('')}</tr>`),
+    `<tr>${SOCIAL_ICONS.map(renderSocialIconHtml).join('')}</tr>`,
     '</table>',
   ].join('\n');
-};
 
+// Linked to the image itself, so a tap opens the full-size calendar.
 const renderCalendarHtml = (calendarUrl) =>
-  `<p style="margin:24px 0 0 0;"><img src="${escapeHtml(calendarUrl)}" width="564" alt="Time4Mishna learning calendar" style="display:block;width:100%;max-width:564px;height:auto;border:0;"></p>`;
+  `<p style="margin:24px 0 0 0;"><a href="${escapeHtml(calendarUrl)}" target="_blank"><img src="${escapeHtml(calendarUrl)}" width="564" alt="Time4Mishna learning calendar" style="display:block;width:100%;max-width:564px;height:auto;border:0;"></a></p>`;
 
 const renderAppLinksHtml = () =>
   [
@@ -173,7 +165,8 @@ const renderAppLinksHtml = () =>
  *
  * `extras` (from emailExtrasService.getEmailExtras) adds the files found in
  * the bucket: the Overview/Key Terms links under each Time4Mishna shiur and
- * the calendar image. Both only appear in emails that include Time4Mishna.
+ * the calendar image, below the donation lines as in the manual send. Both
+ * only appear in emails that include Time4Mishna.
  *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
  * @param {{ program: 'time4mishna'|'time4nach'|'combined', bucketUrl?: string|null,
@@ -218,7 +211,7 @@ const renderEmail = (
     sections: sections.map((section) => renderSectionHtml(section, showTitles)).join('\n'),
     calendar: calendarUrl ? renderCalendarHtml(calendarUrl) : '',
     appLinks: includesMishna(program) ? renderAppLinksHtml() : '',
-    socialButtons: renderSocialButtonsHtml(),
+    socialIcons: renderSocialIconsHtml(),
     shabbosGreeting: isFriday ? '<br>Have a Good Shabbos!' : '',
     unsubscribe: unsubscribeUrl
       ? `Want to change how you receive these emails?<br>You can ${link(unsubscribeUrl, 'unsubscribe from this list', 'color:#656565;text-decoration:underline;')}.`
@@ -255,9 +248,9 @@ const renderEmail = (
     headerLines.join('\n'),
     intro,
     ...sections.map((section) => renderSectionText(section, showTitles)),
-    calendarUrl ? `Calendar: ${calendarUrl}` : null,
     appLines,
     signOff.join('\n'),
+    calendarUrl ? `Calendar: ${calendarUrl}` : null,
     unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : null,
   ].filter(Boolean);
   const text = blocks.join('\n\n') + '\n';

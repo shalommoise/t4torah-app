@@ -110,7 +110,7 @@ describe('runDailySend', () => {
 
     const mishnaMessage = email.send.mock.calls[0][0];
     expect(mishnaMessage).toMatchObject({ date: '2026-09-28', program: 'time4mishna' });
-    expect(mishnaMessage.email.subject).toBe('Time4Mishna – Monday 28 Sep | 17 Tishrei');
+    expect(mishnaMessage.email.subject).toBe('Brachos 1.1-1.4 (Mon 28 Sep)');
     expect(mishnaMessage.email.html).toContain('Brachos 1.1-1.4');
     expect(mishnaMessage.whatsapp.text).toContain('*Brachos 1.1-1.4*');
     expect(whatsapp.send.mock.calls[0][0]).toBe(mishnaMessage);
@@ -131,7 +131,7 @@ describe('runDailySend', () => {
     expect(getEmailExtras.mock.calls[0][0]).toEqual(content());
     const [mishna, nach] = email.send.mock.calls.map(([message]) => message.email.html);
     expect(mishna).toContain('src="https://bucket.test/mishna/calendars/T4M-09-26.png"');
-    expect(mishna).toContain('>OVERVIEW</a>');
+    expect(mishna).toContain('>Brachos Overview</a>');
     expect(nach).not.toContain('T4M-09-26.png');
   });
 
@@ -171,7 +171,7 @@ describe('runDailySend', () => {
     expect(report.results).toEqual([
       { program: 'combined', channel: 'email', sender: 'fake-email', ok: true, id: 'fake-email-combined' },
     ]);
-    expect(sender.send.mock.calls[0][0].email.subject).toMatch(/^Time4Mishna & Time4Nach – /);
+    expect(sender.send.mock.calls[0][0].email.subject).toBe('Brachos 1.1-1.4 & Tehillim 42 (Mon 28 Sep)');
   });
 
   test('one sender rejecting or reporting failure does not stop the others', async () => {
@@ -701,7 +701,7 @@ describe('runDailySend with the real dry-run senders', () => {
     const payload = JSON.parse(
       fs.readFileSync(path.join(outboxDir, '2026-09-28', 'email-time4mishna.mailchimp.json'), 'utf8')
     );
-    expect(payload.requests[0].body.settings.subject_line).toBe('Time4Mishna – Monday 28 Sep | 17 Tishrei');
+    expect(payload.requests[0].body.settings.subject_line).toBe('Brachos 1.1-1.4 (Mon 28 Sep)');
     expect(payload.requests[1].body.html).toContain('href="*|UNSUB|*"');
   });
 

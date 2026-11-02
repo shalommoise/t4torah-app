@@ -8,12 +8,15 @@ const STATIC_LINKS = {
   googlePlayApp: 'https://play.google.com/store/apps/details?id=com.maatayim.time4mishna',
   whatsappGroup: 'https://chat.whatsapp.com/BD7TyvGejybEeDFhmZDIn3',
   website: 'https://www.time4torah.org',
-  donate: 'https://donate.jfutures.org/?message=I%20am%20supporting%20Time4Mishnah-Time4Nach',
+  // Mailchimp fills in the recipient's details (URL-encoded) so the donation
+  // form is pre-filled, as in the manual send.
+  donate:
+    'https://donate.jfutures.org/?message=I%20am%20supporting%20Time4Mishnah-Time4Nach' +
+    '&email=*|URL:EMAIL|*&firstname=*|URL:FNAME|*&surname=*|URL:LNAME|*',
   paypal: 'https://www.paypal.com/paypalme/JewishFuturesTrust',
   facebook: 'https://www.facebook.com/time4torah/',
   youtube: 'https://www.youtube.com/channel/UCnscQTyMAx4ELU73T8_93Bw',
-  soundcloud: 'https://soundcloud.com/user-552219537',
-  spotify: 'https://spoti.fi/2X1YhNf',
+  spotify: 'https://open.spotify.com/show/4MkWuh0AW64I7OdXeSNFWN',
   email: 'mailto:time4mishna@gmail.com',
 };
 
@@ -81,8 +84,8 @@ const getCalendarUrl = (gregorianDate, bucketUrl) => {
 };
 
 const SUMMARY_FILES = [
-  { suffix: 'Overview', label: 'OVERVIEW' },
-  { suffix: 'Key-Terms', label: 'KEY TERMS' },
+  { suffix: 'Overview', label: 'Overview' },
+  { suffix: 'Key-Terms', label: 'Key Terms' },
 ];
 
 /**
@@ -101,11 +104,12 @@ const getRowMasechtos = (scheduleRow) => {
 };
 
 /**
- * Overview and Key Terms PDF links for a regular Time4Mishna shiur:
+ * Overview and Key Terms PDF links for a regular Time4Mishna shiur, labelled
+ * as in the manual send (`Bava Kama Overview`, `Bava Kama Key Terms`):
  * `<bucket>/mishna/summaries/Bava-Kama-Overview.pdf` and `...-Key-Terms.pdf`
- * (spaces in the masechta name become hyphens). When the shiur crosses two
- * masechtos, each label is prefixed with its masechta. These are candidates:
- * the caller checks which files exist (see emailExtrasService).
+ * (spaces in the masechta name become hyphens). A shiur that crosses two
+ * masechtos gets links for both. These are candidates: the caller checks
+ * which files exist (see emailExtrasService).
  *
  * @param {object|null|undefined} scheduleRow
  * @param {string|null} bucketUrl
@@ -118,9 +122,8 @@ const getSummaryLinks = (scheduleRow, bucketUrl) => {
   const masechtos = getRowMasechtos(scheduleRow);
   return masechtos.flatMap((masechta) => {
     const fileBase = encodeURI(String(masechta).trim().split(/\s+/).join('-'));
-    const prefix = masechtos.length > 1 ? `${masechta.toUpperCase()} ` : '';
     return SUMMARY_FILES.map(({ suffix, label }) => ({
-      label: `${prefix}${label}`,
+      label: `${masechta} ${label}`,
       url: `${bucketUrl}/mishna/summaries/${fileBase}-${suffix}.pdf`,
     }));
   });

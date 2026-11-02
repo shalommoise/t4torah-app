@@ -7,6 +7,7 @@ const { createDailyMessage } = require('./render/dailyMessage');
 const { renderEmail } = require('./render/emailRenderer');
 const { renderWhatsapp } = require('./render/whatsappRenderer');
 const { buildSubject } = require('./render/subjectLine');
+const { getSections } = require('./render/dailySections');
 const { getEmailExtras } = require('./emailExtrasService');
 const {
   claimSendLog,
@@ -55,16 +56,18 @@ const errorMessage = (error) => (error && error.message) || String(error);
  *   without it the email has no calendar or summary links.
  * @returns {import('./render/dailyMessage').DailyMessage}
  */
-const renderDailyMessage = (content, program, emailConfig = getEmailConfig(process.env), extras) =>
-  createDailyMessage({
+const renderDailyMessage = (content, program, emailConfig = getEmailConfig(process.env), extras) => {
+  const shiurLabels = getSections(content, program).flatMap((section) => section.items.map((item) => item.label));
+  return createDailyMessage({
     date: content.date.gregorian_date,
     program,
     email: {
-      subject: buildSubject(content.date, program),
+      subject: buildSubject(content.date, program, shiurLabels),
       ...renderEmail(content, { program, ...emailConfig, ...(extras && { extras }) }),
     },
     whatsapp: renderWhatsapp(content, { program, bucketUrl: emailConfig.bucketUrl }),
   });
+};
 
 /**
  * Sends via one sender, turning both an `ok: false` result and a rejection

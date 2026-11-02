@@ -24,8 +24,8 @@ describe('getSummaryLinks', () => {
 
   test('Overview and Key Terms for the masechta', () => {
     expect(getSummaryLinks(row(), BUCKET)).toEqual([
-      { label: 'OVERVIEW', url: `${BUCKET}/mishna/summaries/Shabbos-Overview.pdf` },
-      { label: 'KEY TERMS', url: `${BUCKET}/mishna/summaries/Shabbos-Key-Terms.pdf` },
+      { label: 'Shabbos Overview', url: `${BUCKET}/mishna/summaries/Shabbos-Overview.pdf` },
+      { label: 'Shabbos Key Terms', url: `${BUCKET}/mishna/summaries/Shabbos-Key-Terms.pdf` },
     ]);
   });
 
@@ -34,12 +34,12 @@ describe('getSummaryLinks', () => {
     expect(overview.url).toBe(`${BUCKET}/mishna/summaries/Bava-Kama-Overview.pdf`);
   });
 
-  test('names each masechta when a shiur crosses into the next', () => {
+  test('links both masechtos when a shiur crosses into the next', () => {
     expect(getSummaryLinks(row({ start_masechta_name: 'Brachos', end_masechta_name: 'Peah' }), BUCKET).map((l) => l.label)).toEqual([
-      'BRACHOS OVERVIEW',
-      'BRACHOS KEY TERMS',
-      'PEAH OVERVIEW',
-      'PEAH KEY TERMS',
+      'Brachos Overview',
+      'Brachos Key Terms',
+      'Peah Overview',
+      'Peah Key Terms',
     ]);
   });
 
