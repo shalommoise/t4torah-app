@@ -16,6 +16,10 @@ jest.mock('../src/models/sendLogModel', () => ({
   selectSendLogByDate: jest.fn(),
 }));
 
+jest.mock('../src/services/emailExtrasService', () => ({
+  getEmailExtras: jest.fn(async () => ({ calendarUrl: null, summaryUrls: [] })),
+}));
+
 jest.mock('../src/services/senders', () => ({
   ...jest.requireActual('../src/services/senders'),
   getSenders: jest.fn(),
@@ -64,10 +68,10 @@ describe('getSendPreview', () => {
 
     expect(getDailyContent).toHaveBeenCalledWith('2026-09-28');
     expect(preview).toMatchObject({ date: '2026-09-28', program: 'time4mishna', sendDay: true });
-    expect(preview.email.subject).toBe('Time4Mishna – Monday 28 Sep | 17 Tishrei');
-    expect(preview.email.html).toContain('Brachos 1:1–1:4');
-    expect(preview.email.text).toContain('Brachos 1:1–1:4');
-    expect(preview.whatsapp.text).toContain('*Brachos 1:1–1:4*');
+    expect(preview.email.subject).toBe('Brachos 1.1-1.4 (Mon 28 Sep)');
+    expect(preview.email.html).toContain('Brachos 1.1-1.4');
+    expect(preview.email.text).toContain('Brachos 1.1-1.4');
+    expect(preview.whatsapp.text).toContain('*Brachos 1.1-1.4*');
   });
 
   test('only the requested channel', async () => {

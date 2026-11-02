@@ -8,19 +8,22 @@ const STATIC_LINKS = {
   googlePlayApp: 'https://play.google.com/store/apps/details?id=com.maatayim.time4mishna',
   whatsappGroup: 'https://chat.whatsapp.com/BD7TyvGejybEeDFhmZDIn3',
   website: 'https://www.time4torah.org',
-  donate: 'https://donate.jfutures.org/?message=I%20am%20supporting%20Time4Mishnah-Time4Nach',
+  // Mailchimp fills in the recipient's details (URL-encoded) so the donation
+  // form is pre-filled, as in the manual send.
+  donate:
+    'https://donate.jfutures.org/?message=I%20am%20supporting%20Time4Mishnah-Time4Nach' +
+    '&email=*|URL:EMAIL|*&firstname=*|URL:FNAME|*&surname=*|URL:LNAME|*',
   paypal: 'https://www.paypal.com/paypalme/JewishFuturesTrust',
   facebook: 'https://www.facebook.com/time4torah/',
   youtube: 'https://www.youtube.com/channel/UCnscQTyMAx4ELU73T8_93Bw',
-  soundcloud: 'https://soundcloud.com/user-552219537',
-  spotify: 'https://spoti.fi/2X1YhNf',
+  spotify: 'https://open.spotify.com/show/4MkWuh0AW64I7OdXeSNFWN',
   email: 'mailto:time4mishna@gmail.com',
 };
 
 // Images expected in the assets folder (EMAIL_ASSETS_URL, default <bucket>/email),
 // uploaded from the repo's imgs/ folder.
 const LOGO_FILES = {
-  time4mishna: 'Time-4-Mishnah-logo_black_NEW.png',
+  time4mishna: 'time4mishna-header_logo.png',
   time4nach: 'Time-4-Torah-logo_NEW.png',
   combined: 'Time-4-Torah-logo_NEW.png',
 };
@@ -63,4 +66,75 @@ const buildMishnaShiurLinks = (scheduleRow, bucketUrl) => {
 const getLogoUrl = (program, assetsUrl) =>
   assetsUrl && LOGO_FILES[program] ? `${assetsUrl}/${LOGO_FILES[program]}` : null;
 
-module.exports = { STATIC_LINKS, LOGO_FILES, shiurFileName, buildMishnaShiurLinks, getLogoUrl };
+/**
+ * The monthly Time4Mishna calendar image for a date, e.g. `2026-10-26` →
+ * `<bucket>/mishna/calendars/T4M-10-26.png` (month, then two-digit year).
+ * `null` without a bucket URL or a YYYY-MM-DD date.
+ *
+ * @param {string} gregorianDate
+ * @param {string|null} bucketUrl
+ * @returns {string|null}
+ */
+const getCalendarUrl = (gregorianDate, bucketUrl) => {
+  const match = /^\d{2}(\d{2})-(\d{2})-\d{2}$/.exec(gregorianDate || '');
+  if (!bucketUrl || !match) {
+    return null;
+  }
+  return `${bucketUrl}/mishna/calendars/T4M-${match[2]}-${match[1]}.png`;
+};
+
+const SUMMARY_FILES = [
+  { suffix: 'Overview', label: 'Overview' },
+  { suffix: 'Key-Terms', label: 'Key Terms' },
+];
+
+/**
+ * The masechtos a regular Time4Mishna shiur covers (one, or two when it
+ * crosses into the next masechta). Empty for chazara and incomplete rows.
+ *
+ * @param {object|null|undefined} scheduleRow
+ * @returns {string[]}
+ */
+const getRowMasechtos = (scheduleRow) => {
+  if (!scheduleRow || scheduleRow.shiur_type !== 'regular') {
+    return [];
+  }
+  const names = [scheduleRow.start_masechta_name, scheduleRow.end_masechta_name].filter(Boolean);
+  return [...new Set(names)];
+};
+
+/**
+ * Overview and Key Terms PDF links for a regular Time4Mishna shiur, labelled
+ * as in the manual send (`Bava Kama Overview`, `Bava Kama Key Terms`):
+ * `<bucket>/mishna/summaries/Bava-Kama-Overview.pdf` and `...-Key-Terms.pdf`
+ * (spaces in the masechta name become hyphens). A shiur that crosses two
+ * masechtos gets links for both. These are candidates: the caller checks
+ * which files exist (see emailExtrasService).
+ *
+ * @param {object|null|undefined} scheduleRow
+ * @param {string|null} bucketUrl
+ * @returns {{ label: string, url: string }[]}
+ */
+const getSummaryLinks = (scheduleRow, bucketUrl) => {
+  if (!bucketUrl) {
+    return [];
+  }
+  const masechtos = getRowMasechtos(scheduleRow);
+  return masechtos.flatMap((masechta) => {
+    const fileBase = encodeURI(String(masechta).trim().split(/\s+/).join('-'));
+    return SUMMARY_FILES.map(({ suffix, label }) => ({
+      label: `${masechta} ${label}`,
+      url: `${bucketUrl}/mishna/summaries/${fileBase}-${suffix}.pdf`,
+    }));
+  });
+};
+
+module.exports = {
+  STATIC_LINKS,
+  LOGO_FILES,
+  shiurFileName,
+  buildMishnaShiurLinks,
+  getLogoUrl,
+  getCalendarUrl,
+  getSummaryLinks,
+};

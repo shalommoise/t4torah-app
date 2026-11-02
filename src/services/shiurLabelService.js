@@ -1,8 +1,9 @@
 const { parseShiurTitle } = require('../../utils/utils');
 
 /**
- * Builds a Mishna range label (e.g. `Brachos 1:1–1:4`, or across masechtos
- * `Brachos 9:5 – Peah 1:3`) from a `selectTime4MishnaScheduleByDateId` row.
+ * Builds a Mishna range label in the dotted format of the manual send (e.g.
+ * `Brachos 1.1-1.4`, or across masechtos `Brachos 9.5 - Peah 1.3`) from a
+ * `selectTime4MishnaScheduleByDateId` row.
  *
  * Returns `null` on a no-shiur day (no schedule row) or when there isn't
  * enough data to build a label. Returns `'Chazara'` for non-regular shiurim,
@@ -27,13 +28,13 @@ const formatMishnaShiurLabel = (scheduleRow) => {
     scheduleRow.end_perek != null &&
     scheduleRow.end_mishna_number != null
   ) {
-    const start = `${scheduleRow.start_perek}:${scheduleRow.start_mishna_number}`;
-    const end = `${scheduleRow.end_perek}:${scheduleRow.end_mishna_number}`;
+    const start = `${scheduleRow.start_perek}.${scheduleRow.start_mishna_number}`;
+    const end = `${scheduleRow.end_perek}.${scheduleRow.end_mishna_number}`;
 
     if (scheduleRow.start_masechta_id === scheduleRow.end_masechta_id) {
-      return `${scheduleRow.start_masechta_name} ${start}–${end}`;
+      return `${scheduleRow.start_masechta_name} ${start}-${end}`;
     }
-    return `${scheduleRow.start_masechta_name} ${start} – ${scheduleRow.end_masechta_name} ${end}`;
+    return `${scheduleRow.start_masechta_name} ${start} - ${scheduleRow.end_masechta_name} ${end}`;
   }
 
   // Fall back to parsing the raw shiur_title (e.g. "Brachos 1:1-1:4") when the
@@ -43,12 +44,12 @@ const formatMishnaShiurLabel = (scheduleRow) => {
     return null;
   }
 
-  const start = `${parsed.firstPerek}:${parsed.firstMishna}`;
-  const end = `${parsed.lastPerek}:${parsed.lastMishna}`;
+  const start = `${parsed.firstPerek}.${parsed.firstMishna}`;
+  const end = `${parsed.lastPerek}.${parsed.lastMishna}`;
   if (parsed.firstMasechta === parsed.lastMasechta) {
-    return `${parsed.firstMasechta} ${start}–${end}`;
+    return `${parsed.firstMasechta} ${start}-${end}`;
   }
-  return `${parsed.firstMasechta} ${start} – ${parsed.lastMasechta} ${end}`;
+  return `${parsed.firstMasechta} ${start} - ${parsed.lastMasechta} ${end}`;
 };
 
 /**

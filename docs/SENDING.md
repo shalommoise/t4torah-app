@@ -27,7 +27,7 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 | Labels | `src/services/shiurLabelService.js` | `Brachos 1:1–1:4`, `Brachos 9:5 – Peah 1:3`, `Tehillim 42`, `Chazara`. |
 | Shared sections | `src/services/render/dailySections.js` | Per-program sections, date formatting, `stripLinks`. |
 | Message model | `src/services/render/dailyMessage.js` | `DailyMessage = { date, program, email: { subject, html, text }, whatsapp: { text } }`. |
-| Subject | `src/services/render/subjectLine.js` | `SUBJECT_FORMAT`, e.g. `Time4Mishna – Monday 28 Sep | 17 Tishrei | Chol HaMoed Sukkos`. Empty parts are dropped. |
+| Subject | `src/services/render/subjectLine.js` | `SUBJECT_FORMAT`, matching the manual send: e.g. `Shabbos 17.3-17.6 (Wed 28 Oct)`, plus ` \| Chol HaMoed Sukkos` on a special date. Without a shiur label it uses the program title. |
 | Email | `src/services/render/emailRenderer.js` | `{{token}}` template, inline CSS, 600px max width, Hebrew date in `dir="rtl"`. |
 | WhatsApp | `src/services/render/whatsappRenderer.js` | `*bold*` / `_italic_`, under 1,000 characters (truncated with `…`). |
 | Senders | `src/services/senders/` | `index.js` (interface, registry, `getSenders`), `consoleSender.js`, `fileSender.js`, `mailchimpSender.js` (live email + dry-run preview), `providerSenders.js` (WhatsApp stub). |
@@ -65,11 +65,23 @@ Set these in `.env` (see [`.env.example`](../.env.example)). Unset or blank valu
 | `OUTBOX_DIR` | `outbox` | folder for dry-run files (gitignored); relative to the working directory |
 | `SENDS_ADMIN_TOKEN` | *(unset → 503)* | bearer token for `/api/v1/sends/*` (API server only, not the job) |
 | `BUCKET_PATH` | *(unset → no SHIUR/TEXT links)* | public base URL of the shiurim bucket; **required for a live send** |
-| `EMAIL_ASSETS_URL` | `<BUCKET_PATH>/email` | where the logo images are (upload `imgs/Time-4-Mishnah-logo_black_NEW.png` and `imgs/Time-4-Torah-logo_NEW.png`); without it the banner shows the title as text |
+| `EMAIL_ASSETS_URL` | `<BUCKET_PATH>/email` | where the logo images are (`time4mishna-header_logo.png`, the white Time4Mishna header logo, and `Time-4-Torah-logo_NEW.png` uploaded from `imgs/`); without it the banner shows the title as text |
 | `EMAIL_UNSUBSCRIBE_URL` | *(unset → no footer link)* | the provider's unsubscribe link or merge tag; **`*\|UNSUB\|*` for Mailchimp** (required) |
 | `MAILCHIMP_*`, `SEND_TIME`, `SEND_TIMEZONE` | see [Mailchimp](#mailchimp) | |
 
 The job also needs the usual `DATABASE_*` variables.
+
+### Optional files in the bucket
+
+Emails that include Time4Mishna add these when they are in `BUCKET_PATH`, and leave them out when they are not. Each file is checked with a HEAD request just before rendering; a missing file, an error or a timeout counts as missing and never stops the send.
+
+| File | Path in the bucket | Shown |
+|---|---|---|
+| Monthly calendar | `mishna/calendars/T4M-<MM>-<YY>.png` (e.g. `T4M-10-26.png` for October 2026) | linked image below the donation lines, above the footer icons |
+| Masechta overview | `mishna/summaries/<Masechta>-Overview.pdf` (spaces → hyphens, e.g. `Bava-Kama-Overview.pdf`) | `<Masechta> Overview` link under SHIUR/TEXT |
+| Masechta key terms | `mishna/summaries/<Masechta>-Key-Terms.pdf` | `<Masechta> Key Terms` link under SHIUR/TEXT |
+
+The masechta name is spelled as in `masechta_table`.
 
 ### Dry-run vs live
 

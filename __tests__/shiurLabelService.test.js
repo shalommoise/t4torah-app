@@ -26,7 +26,7 @@ describe('formatMishnaShiurLabel', () => {
       end_perek: 1,
       end_mishna_number: 4,
     };
-    expect(formatMishnaShiurLabel(row)).toBe('Brachos 1:1–1:4');
+    expect(formatMishnaShiurLabel(row)).toBe('Brachos 1.1-1.4');
   });
 
   test('formats a cross-masechta range with spaced dash', () => {
@@ -41,17 +41,17 @@ describe('formatMishnaShiurLabel', () => {
       end_perek: 1,
       end_mishna_number: 3,
     };
-    expect(formatMishnaShiurLabel(row)).toBe('Brachos 9:5 – Peah 1:3');
+    expect(formatMishnaShiurLabel(row)).toBe('Brachos 9.5 - Peah 1.3');
   });
 
   test('falls back to parsing shiur_title when joined fields are missing', () => {
     const row = { shiur_type: 'regular', shiur_title: 'Brachos 1:1-1:4' };
-    expect(formatMishnaShiurLabel(row)).toBe('Brachos 1:1–1:4');
+    expect(formatMishnaShiurLabel(row)).toBe('Brachos 1.1-1.4');
   });
 
   test('falls back to parsing a cross-masechta shiur_title', () => {
     const row = { shiur_type: 'regular', shiur_title: 'Brachos 9:5-Peah 1:3' };
-    expect(formatMishnaShiurLabel(row)).toBe('Brachos 9:5 – Peah 1:3');
+    expect(formatMishnaShiurLabel(row)).toBe('Brachos 9.5 - Peah 1.3');
   });
 
   test('returns null when neither joined fields nor a parsable title exist', () => {

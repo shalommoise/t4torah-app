@@ -10,6 +10,10 @@ const {
 } = require('./dailySections');
 const { STATIC_LINKS, getLogoUrl } = require('./emailLinks');
 
+// Same value as emailExtrasService.NO_EXTRAS; not imported so the renderer
+// doesn't load the HTTP client.
+const NO_EXTRAS = { calendarUrl: null, summaryUrls: [] };
+
 const TEMPLATE = fs.readFileSync(
   path.join(__dirname, '..', '..', 'templates', 'dailyEmail.html'),
   'utf8'
@@ -52,6 +56,9 @@ const includesMishna = (program) => program === 'time4mishna' || program === 'co
 const link = (href, label, style = LINK_STYLE) =>
   `<a href="${escapeHtml(href)}" target="_blank" style="${style}">${escapeHtml(label)}</a>`;
 
+// `Shabbos 17.3-17.6 SHIUR`, as in the manual send.
+const fileLabel = (item, kind) => (item.label ? `${item.label} ${kind}` : kind);
+
 const renderItemHtml = (item) => {
   const parts = [];
   if (item.label) {
@@ -59,8 +66,11 @@ const renderItemHtml = (item) => {
   }
   if (item.links) {
     parts.push(
-      `<p style="margin:0;">${link(item.links.audio, 'SHIUR')}<br>${link(item.links.text, 'TEXT')}</p>`
+      `<p style="margin:0;">${link(item.links.audio, fileLabel(item, 'SHIUR'))}<br>${link(item.links.text, fileLabel(item, 'TEXT'))}</p>`
     );
+  }
+  if (item.summaries && item.summaries.length) {
+    parts.push(`<p style="margin:16px 0 0 0;">${item.summaries.map(({ url, label }) => link(url, label)).join('<br>')}</p>`);
   }
   if (item.notice) {
     parts.push(`<p style="margin:4px 0 0 0;font-size:15px;color:#8a4b00;">${escapeHtml(item.notice)}</p>`);
@@ -93,8 +103,9 @@ const renderSectionText = ({ title, items }, showTitle) => {
       lines.push(item.label);
     }
     if (item.links) {
-      lines.push(`Shiur: ${item.links.audio}`, `Text: ${item.links.text}`);
+      lines.push(`${fileLabel(item, 'SHIUR')} (${item.links.audio})`, `${fileLabel(item, 'TEXT')} (${item.links.text})`);
     }
+    (item.summaries || []).forEach(({ label, url }) => lines.push(`${label} (${url})`));
     if (item.notice) {
       lines.push(item.notice);
     }
@@ -109,6 +120,32 @@ const renderLogoHtml = (program, title, assetsUrl) => {
   }
   return `<img src="${escapeHtml(logoUrl)}" width="564" alt="${escapeHtml(title)}" style="display:block;width:100%;max-width:564px;height:auto;border:0;">`;
 };
+
+// Footer social icons: the same icons and order as the manual send's
+// Mailchimp follow block. One table row, so they render in Outlook.
+const SOCIAL_ICON_BASE = 'https://cdn-images.mailchimp.com/icons/social-block-v2';
+const SOCIAL_ICONS = [
+  { name: 'facebook', label: 'Facebook', icon: 'color-facebook-48.png' },
+  { name: 'email', label: 'Email', icon: 'color-forwardtofriend-48.png' },
+  { name: 'website', label: 'Website', icon: 'color-link-48.png' },
+  { name: 'youtube', label: 'YouTube', icon: 'color-youtube-48.png' },
+  { name: 'spotify', label: 'Spotify', icon: 'color-spotify-48.png' },
+];
+
+const renderSocialIconHtml = ({ name, label, icon }) =>
+  `<td style="padding:0 9px;"><a href="${escapeHtml(STATIC_LINKS[name])}" target="_blank">` +
+  `<img src="${SOCIAL_ICON_BASE}/${icon}" alt="${escapeHtml(label)}" width="24" height="24" style="display:block;border:0;"></a></td>`;
+
+const renderSocialIconsHtml = () =>
+  [
+    '<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">',
+    `<tr>${SOCIAL_ICONS.map(renderSocialIconHtml).join('')}</tr>`,
+    '</table>',
+  ].join('\n');
+
+// Linked to the image itself, so a tap opens the full-size calendar.
+const renderCalendarHtml = (calendarUrl) =>
+  `<p style="margin:24px 0 0 0;"><a href="${escapeHtml(calendarUrl)}" target="_blank"><img src="${escapeHtml(calendarUrl)}" width="564" alt="Time4Mishna learning calendar" style="display:block;width:100%;max-width:564px;height:auto;border:0;"></a></p>`;
 
 const renderAppLinksHtml = () =>
   [
@@ -126,12 +163,21 @@ const renderAppLinksHtml = () =>
  * fixed Time4Torah links in emailLinks.js, and the unsubscribe link when
  * `unsubscribeUrl` is set. URLs in database text are stripped.
  *
+ * `extras` (from emailExtrasService.getEmailExtras) adds the files found in
+ * the bucket: the Overview/Key Terms links under each Time4Mishna shiur and
+ * the calendar image, below the donation lines as in the manual send. Both
+ * only appear in emails that include Time4Mishna.
+ *
  * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
  * @param {{ program: 'time4mishna'|'time4nach'|'combined', bucketUrl?: string|null,
- *   assetsUrl?: string|null, unsubscribeUrl?: string|null }} options
+ *   assetsUrl?: string|null, unsubscribeUrl?: string|null,
+ *   extras?: { calendarUrl: string|null, summaryUrls: string[] } }} options
  * @returns {{ html: string, text: string }}
  */
-const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, unsubscribeUrl = null }) => {
+const renderEmail = (
+  content,
+  { program, bucketUrl = null, assetsUrl = null, unsubscribeUrl = null, extras = NO_EXTRAS }
+) => {
   assertRenderable(content, program);
 
   const dateRow = content.date;
@@ -139,7 +185,8 @@ const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, uns
   const studyName = STUDY_NAMES[program];
   const gregorianDate = formatGregorianDate(dateRow.gregorian_date);
   const specialDate = stripLinks(dateRow.special_date);
-  const sections = getSections(content, program, { bucketUrl });
+  const sections = getSections(content, program, { bucketUrl, summaryUrls: extras.summaryUrls });
+  const calendarUrl = includesMishna(program) ? extras.calendarUrl : null;
   const showTitles = program === 'combined';
   const hasFileLinks = sections.some((section) => section.items.some((item) => item.links));
   const isFriday = dateRow.day_of_week === 'Friday';
@@ -162,7 +209,9 @@ const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, uns
       : '',
     intro: intro ? `<p style="margin:24px 0 0 0;">${escapeHtml(intro)}</p>` : '',
     sections: sections.map((section) => renderSectionHtml(section, showTitles)).join('\n'),
+    calendar: calendarUrl ? renderCalendarHtml(calendarUrl) : '',
     appLinks: includesMishna(program) ? renderAppLinksHtml() : '',
+    socialIcons: renderSocialIconsHtml(),
     shabbosGreeting: isFriday ? '<br>Have a Good Shabbos!' : '',
     unsubscribe: unsubscribeUrl
       ? `Want to change how you receive these emails?<br>You can ${link(unsubscribeUrl, 'unsubscribe from this list', 'color:#656565;text-decoration:underline;')}.`
@@ -201,6 +250,7 @@ const renderEmail = (content, { program, bucketUrl = null, assetsUrl = null, uns
     ...sections.map((section) => renderSectionText(section, showTitles)),
     appLines,
     signOff.join('\n'),
+    calendarUrl ? `Calendar: ${calendarUrl}` : null,
     unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : null,
   ].filter(Boolean);
   const text = blocks.join('\n\n') + '\n';

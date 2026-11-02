@@ -4,6 +4,7 @@ const path = require('path');
 const { getDailyContent } = require('../src/services/dailyContentService');
 const { getSenders } = require('../src/services/senders');
 const { runDailySend } = require('../src/services/dailySendService');
+const { getEmailExtras } = require('../src/services/emailExtrasService');
 const {
   claimSendLog,
   reclaimFailedSendLog,
@@ -24,6 +25,10 @@ jest.mock('../src/models/sendLogModel', () => ({
   forceClaimSendLog: jest.fn(),
   finishSendLog: jest.fn(),
   selectSendLog: jest.fn(),
+}));
+
+jest.mock('../src/services/emailExtrasService', () => ({
+  getEmailExtras: jest.fn(async () => ({ calendarUrl: null, summaryUrls: [] })),
 }));
 
 const sendLogFns = () => [claimSendLog, reclaimFailedSendLog, forceClaimSendLog, finishSendLog, selectSendLog];
@@ -105,10 +110,29 @@ describe('runDailySend', () => {
 
     const mishnaMessage = email.send.mock.calls[0][0];
     expect(mishnaMessage).toMatchObject({ date: '2026-09-28', program: 'time4mishna' });
-    expect(mishnaMessage.email.subject).toBe('Time4Mishna – Monday 28 Sep | 17 Tishrei');
-    expect(mishnaMessage.email.html).toContain('Brachos 1:1–1:4');
-    expect(mishnaMessage.whatsapp.text).toContain('*Brachos 1:1–1:4*');
+    expect(mishnaMessage.email.subject).toBe('Brachos 1.1-1.4 (Mon 28 Sep)');
+    expect(mishnaMessage.email.html).toContain('Brachos 1.1-1.4');
+    expect(mishnaMessage.whatsapp.text).toContain('*Brachos 1.1-1.4*');
     expect(whatsapp.send.mock.calls[0][0]).toBe(mishnaMessage);
+  });
+
+  test('looks up the calendar and summaries once and adds them to the email', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getEmailExtras.mockResolvedValueOnce({
+      calendarUrl: 'https://bucket.test/mishna/calendars/T4M-09-26.png',
+      summaryUrls: ['https://bucket.test/mishna/summaries/Brachos-Overview.pdf'],
+    });
+    const email = { name: 'fake-email', channel: 'email', send: jest.fn().mockResolvedValue({ ok: true }) };
+    getSenders.mockReturnValue([email]);
+
+    await runDailySend({ date: '2026-09-28', programs: ['time4mishna', 'time4nach'], emailConfig: LIVE_EMAIL_CONFIG });
+
+    expect(getEmailExtras).toHaveBeenCalledTimes(1);
+    expect(getEmailExtras.mock.calls[0][0]).toEqual(content());
+    const [mishna, nach] = email.send.mock.calls.map(([message]) => message.email.html);
+    expect(mishna).toContain('src="https://bucket.test/mishna/calendars/T4M-09-26.png"');
+    expect(mishna).toContain('>Brachos Overview</a>');
+    expect(nach).not.toContain('T4M-09-26.png');
   });
 
   test('defaults to dry-run and passes options to getSenders', async () => {
@@ -147,7 +171,7 @@ describe('runDailySend', () => {
     expect(report.results).toEqual([
       { program: 'combined', channel: 'email', sender: 'fake-email', ok: true, id: 'fake-email-combined' },
     ]);
-    expect(sender.send.mock.calls[0][0].email.subject).toMatch(/^Time4Mishna & Time4Nach – /);
+    expect(sender.send.mock.calls[0][0].email.subject).toBe('Brachos 1.1-1.4 & Tehillim 42 (Mon 28 Sep)');
   });
 
   test('one sender rejecting or reporting failure does not stop the others', async () => {
@@ -677,7 +701,7 @@ describe('runDailySend with the real dry-run senders', () => {
     const payload = JSON.parse(
       fs.readFileSync(path.join(outboxDir, '2026-09-28', 'email-time4mishna.mailchimp.json'), 'utf8')
     );
-    expect(payload.requests[0].body.settings.subject_line).toBe('Time4Mishna – Monday 28 Sep | 17 Tishrei');
+    expect(payload.requests[0].body.settings.subject_line).toBe('Brachos 1.1-1.4 (Mon 28 Sep)');
     expect(payload.requests[1].body.html).toContain('href="*|UNSUB|*"');
   });
 
