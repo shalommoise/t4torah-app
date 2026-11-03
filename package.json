@@ -13,7 +13,8 @@
     "test:integration": "NODE_OPTIONS=--localstorage-file=/tmp/jest-localstorage jest __tests__/integration",
     "send:daily": "node ./jobs/dailySend.js",
     "import:summaries": "node ./jobs/importSummarySheets.js",
-    "send:test": "node ./jobs/sendTest.js"
+    "send:test": "node ./jobs/sendTest.js",
+    "castos:publish": "node ./jobs/publishCastosEpisode.js"
   },
   "repository": {
     "type": "git",
@@ -35,7 +36,8 @@
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "mysql": "^2.18.1",
-    "mysql2": "^3.24.4"
+    "mysql2": "^3.24.4",
+    "node-id3": "^0.2.9"
   },
   "devDependencies": {
     "jest": "^30.5.2",
