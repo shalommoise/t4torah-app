@@ -31,6 +31,7 @@ describe('main', () => {
     getEmailConfig: jest.fn(() => ({ bucketUrl: 'https://bucket.test' })),
     getDailyContent: jest.fn().mockResolvedValue({ date: { gregorian_date: '2026-10-29' } }),
     getEmailExtras: jest.fn().mockResolvedValue({ calendarUrl: null, summaryUrls: [] }),
+    getChazara: jest.fn().mockResolvedValue(null),
     renderDailyMessage: jest.fn(() => ({ email: { subject: 'Subject' } })),
     createMailchimpClient: jest.fn(() => 'client'),
     sendTestEmail: jest.fn().mockResolvedValue({ ok: true, campaignId: 'c1' }),
@@ -48,13 +49,28 @@ describe('main', () => {
       { date: { gregorian_date: '2026-10-29' } },
       'time4mishna',
       { bucketUrl: 'https://bucket.test' },
-      { calendarUrl: null, summaryUrls: [] }
+      { calendarUrl: null, summaryUrls: [] },
+      null
     );
     expect(d.sendTestEmail).toHaveBeenCalledWith(
       expect.objectContaining({ emails: ['me@example.org'], client: 'client' })
     );
     expect(d.log).toHaveBeenCalledWith('[test] 2026-10-29 "Subject" sent to me@example.org');
     expect(d.closePool).toHaveBeenCalled();
+  });
+
+  test('passes the chazara to the renderer on a chazara Friday', async () => {
+    const chazara = { range: 'Shabbos 18.3-22.5', perakim: 'Shabbos 5-6', links: {} };
+    const d = deps({ getChazara: jest.fn().mockResolvedValue(chazara) });
+    await expect(main(['--to=me@example.org', '--date=2026-10-29'], d)).resolves.toBe(0);
+    expect(d.getChazara).toHaveBeenCalledWith({ date: { gregorian_date: '2026-10-29' } }, { bucketUrl: 'https://bucket.test' });
+    expect(d.renderDailyMessage.mock.calls[0][4]).toBe(chazara);
+  });
+
+  test('exits 1 when a chazara PDF is missing', async () => {
+    const d = deps({ getChazara: jest.fn().mockRejectedValue(new Error('Chazara PDF not found in the bucket: x')) });
+    await expect(main(['--to=me@example.org', '--date=2026-10-29'], d)).resolves.toBe(1);
+    expect(d.sendTestEmail).not.toHaveBeenCalled();
   });
 
   test('exits 1 on a failed send or a missing date', async () => {

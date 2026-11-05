@@ -5,6 +5,7 @@ const { getDailyContent } = require('../src/services/dailyContentService');
 const { getSenders } = require('../src/services/senders');
 const { runDailySend } = require('../src/services/dailySendService');
 const { getEmailExtras } = require('../src/services/emailExtrasService');
+const { getChazara } = require('../src/services/chazaraService');
 const {
   claimSendLog,
   reclaimFailedSendLog,
@@ -29,6 +30,10 @@ jest.mock('../src/models/sendLogModel', () => ({
 
 jest.mock('../src/services/emailExtrasService', () => ({
   getEmailExtras: jest.fn(async () => ({ calendarUrl: null, summaryUrls: [] })),
+}));
+
+jest.mock('../src/services/chazaraService', () => ({
+  getChazara: jest.fn(async () => null),
 }));
 
 const sendLogFns = () => [claimSendLog, reclaimFailedSendLog, forceClaimSendLog, finishSendLog, selectSendLog];
@@ -734,5 +739,73 @@ describe('runDailySend live email config', () => {
     await expect(
       runDailySend({ date: '2026-09-28', dryRun: false, emailConfig: { bucketUrl: null, assetsUrl: null, unsubscribeUrl: null } })
     ).rejects.toThrow('BUCKET_PATH must be set for a live send');
+  });
+
+  describe('on a chazara Friday', () => {
+    const fridayContent = () =>
+      content({
+        date: dateRow({ gregorian_date: '2026-11-13', day_of_week: 'Friday' }),
+        time4mishna: [{ shiur_type: 'chazara', additional_notice: 'Shabbos 22.6 - Eiruvin 1.9' }],
+      });
+    const chazara = {
+      range: 'Shabbos 22.6 - Eiruvin 1.9',
+      perakim: 'Shabbos 7-8',
+      links: {
+        text: 'https://bucket.test/mishna/chazara/shabbos_22.6-eiruvin_1.9_text.pdf',
+        summary: 'https://bucket.test/mishna/chazara/shabbos_22.6-eiruvin_1.9_summary.pdf',
+        perakim: 'https://bucket.test/mishna/chazara/shabbos_7-8.pdf',
+      },
+    };
+
+    test('sends the chazara email as the Time4Mishna email', async () => {
+      getDailyContent.mockResolvedValue(fridayContent());
+      getChazara.mockResolvedValueOnce(chazara);
+      const email = fakeSender('fake-email', 'email');
+      getSenders.mockReturnValue([email]);
+
+      const report = await runDailySend({ date: '2026-11-13', programs: ['time4mishna', 'time4nach'], emailConfig: LIVE_EMAIL_CONFIG });
+
+      expect(report.status).toBe('sent');
+      expect(getChazara).toHaveBeenCalledWith(fridayContent(), LIVE_EMAIL_CONFIG);
+      const [mishna, nach] = email.send.mock.calls.map(([message]) => message);
+      expect(mishna.email.subject).toBe('Chazara: Shabbos 22.6 - Eiruvin 1.9 | Shabbos 7-8');
+      expect(mishna.email.previewText).toBe('Shabbos 7-8');
+      expect(mishna.email.html).toContain(chazara.links.perakim);
+      expect(nach.email.subject).not.toContain('Chazara:');
+      expect(nach.email.previewText).toBeUndefined();
+    });
+
+    test('fails only the Time4Mishna email when a PDF is missing, without claiming send_log', async () => {
+      getDailyContent.mockResolvedValue(fridayContent());
+      getChazara.mockRejectedValueOnce(new Error('Chazara PDF not found in the bucket: x.pdf'));
+      const email = fakeSender('fake-email', 'email');
+      getSenders.mockReturnValue([email]);
+
+      const report = await runDailySend({ date: '2026-11-13', programs: ['time4mishna', 'time4nach'], emailConfig: LIVE_EMAIL_CONFIG });
+
+      expect(report.status).toBe('partial');
+      expect(report.results[0]).toEqual({
+        program: 'time4mishna',
+        channel: 'email',
+        sender: null,
+        ok: false,
+        error: 'Render failed: Chazara PDF not found in the bucket: x.pdf',
+      });
+      expect(report.results[1]).toMatchObject({ program: 'time4nach', ok: true });
+      expect(email.send).toHaveBeenCalledTimes(1);
+      expect(claimSendLog).toHaveBeenCalledTimes(1);
+    });
+
+    test('sends nothing on a Yom Tov Friday', async () => {
+      getDailyContent.mockResolvedValue(
+        content({ date: dateRow({ gregorian_date: '2027-04-23', day_of_week: 'Friday', is_yom_tov: 1 }) })
+      );
+      getSenders.mockReturnValue([fakeSender('fake-email', 'email')]);
+
+      const report = await runDailySend({ date: '2027-04-23', emailConfig: LIVE_EMAIL_CONFIG });
+
+      expect(report.status).toBe('skipped');
+      expect(getChazara).not.toHaveBeenCalled();
+    });
   });
 });

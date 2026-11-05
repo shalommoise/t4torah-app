@@ -44,6 +44,7 @@ const buildCampaignRequests = (message, { audienceId, fromName, replyTo }) => ({
     recipients: { list_id: audienceId },
     settings: {
       subject_line: message.email.subject,
+      ...(message.email.previewText && { preview_text: message.email.previewText }),
       title: `${message.program} ${message.date}`,
       from_name: fromName,
       reply_to: replyTo,

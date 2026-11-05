@@ -73,6 +73,7 @@ const loadDefaultDeps = () => {
   const { getEmailConfig } = require('../src/config/email');
   const { getDailyContent } = require('../src/services/dailyContentService');
   const { getEmailExtras } = require('../src/services/emailExtrasService');
+  const { getChazara } = require('../src/services/chazaraService');
   const { renderDailyMessage } = require('../src/services/dailySendService');
   const { createMailchimpClient } = require('../src/services/mailchimp/client');
   const { sendTestEmail } = require('../src/services/mailchimp/testSend');
@@ -83,6 +84,7 @@ const loadDefaultDeps = () => {
     getEmailConfig,
     getDailyContent,
     getEmailExtras,
+    getChazara,
     renderDailyMessage,
     createMailchimpClient,
     sendTestEmail,
@@ -130,7 +132,8 @@ const main = async (argv, deps = loadDefaultDeps()) => {
       return EXIT_FAILURE;
     }
     const extras = await deps.getEmailExtras(content, emailConfig);
-    const message = deps.renderDailyMessage(content, PROGRAM, emailConfig, extras);
+    const chazara = await deps.getChazara(content, emailConfig);
+    const message = deps.renderDailyMessage(content, PROGRAM, emailConfig, extras, chazara);
     const result = await deps.sendTestEmail({
       message,
       emails: args.to,

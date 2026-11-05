@@ -2,6 +2,7 @@ const { getDailyContent } = require('./dailyContentService');
 const { shouldSendOn } = require('./sendRules');
 const { renderDailyMessage } = require('./dailySendService');
 const { getEmailExtras } = require('./emailExtrasService');
+const { getChazara } = require('./chazaraService');
 const { getEmailConfig } = require('../config/email');
 const { PROGRAMS } = require('./render/dailyMessage');
 const { CHANNELS } = require('./senders');
@@ -37,7 +38,8 @@ const getSendPreview = async ({ date, program = DEFAULT_PROGRAM, channel } = {})
 
   const emailConfig = getEmailConfig(process.env);
   const extras = await getEmailExtras(content, emailConfig);
-  const message = renderDailyMessage(content, program, emailConfig, extras);
+  const chazara = await getChazara(content, emailConfig);
+  const message = renderDailyMessage(content, program, emailConfig, extras, chazara);
   const preview = { date: message.date, program, sendDay: shouldSendOn(content.date) };
   if (channel === undefined || channel === 'email') {
     preview.email = message.email;

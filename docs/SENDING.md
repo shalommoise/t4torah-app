@@ -42,9 +42,20 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 - **Only Time4Torah's own links.** The email links to the day's SHIUR (mp3) and TEXT (pdf) in the bucket, plus the fixed links in `src/services/render/emailLinks.js` (apps, WhatsApp group, website, donate, social) and the provider's unsubscribe link. No Sefaria links. URLs typed into `special_date` or `additional_notice` are still removed.
 - **WhatsApp sends the files, not links.** The text has no URLs; the day's shiur mp3 (`audio`) and text pdf (`document`) come in `message.whatsapp.attachments` as `{ type, url, filename }`, for the provider to fetch by URL. Dry-run output lists them after the text.
 - **Email design** follows the Time4Torah Mailchimp template (`src/templates/dailyEmail.html`): logo banner, shiur with SHIUR/TEXT links, app/WhatsApp links, sign-off, signature, donate links, social links, unsubscribe footer. Fridays add "Have a Good Shabbos!".
-- **Shiur file links** use the same naming as the time4mishna API (`utils/findFile.js`): `<BUCKET_PATH>/mishna/shiurim/<title>.mp3` and `<BUCKET_PATH>/mishna/texts/<title>.pdf`, where `<title>` is `shiur_title` lower-cased with spaces as `_` (e.g. `bava_kama_1:1-1:4`). Only regular Time4Mishna shiurim get links; chazara days and Time4Nach have none yet (the weekly text/summaries need their own generation workflow).
+- **Shiur file links** use the same naming as the time4mishna API (`utils/findFile.js`): `<BUCKET_PATH>/mishna/shiurim/<title>.mp3` and `<BUCKET_PATH>/mishna/texts/<title>.pdf`, where `<title>` is `shiur_title` lower-cased with spaces as `_` (e.g. `bava_kama_1:1-1:4`). Only regular Time4Mishna shiurim get these links; Time4Nach has none yet. Chazara Fridays get their own email (below).
 - **WhatsApp formatting characters** (`*`, `_`, `~`, `` ` ``) are removed from database text, so a notice can't break the message's formatting. Email is not affected.
-- A day with no shiur shows "No shiur today."; a non-regular shiur shows "Chazara".
+- A day with no shiur shows "No shiur today."; a non-regular shiur shows "Chazara" (except the Time4Mishna email on a chazara Friday, below).
+
+### Friday chazara email
+
+On a Friday whose Time4Mishna row is a chazara, the Time4Mishna email is the chazara email instead of the daily one (`src/services/render/chazaraEmail.js`, `src/services/chazaraService.js`). It is email-only: no Castos episode, and WhatsApp keeps the plain "Chazara" message. Yom Tov Fridays send nothing, as on any Yom Tov.
+
+- **Range and perakim** come from `additional_notice`, written by `db/createSchedule/chazaraSchedule.js`: the Friday row holds the week's range (`Shabbos 18.3-22.5`, `Shabbos 22.6 - Eiruvin 1.9`) and the next day's Shabbos row holds the perakim (`Shabbos 5-6`, `Bikkurim 4`, `Orlah 3 - Bikkurim 1`). Text in any other form fails the email rather than guessing.
+- **Files** are in `<BUCKET_PATH>/mishna/chazara/`, named lower-case with spaces as `_` and ` - ` as `-`: `shabbos_22.6-eiruvin_1.9_text.pdf`, `shabbos_22.6-eiruvin_1.9_summary.pdf`, `shabbos_7-8.pdf`.
+- **The week's TEXT PDF must exist** (HEAD returns 2xx). If it's missing, the Time4Mishna email fails with `Render failed: Chazara TEXT PDF not found in the bucket: …`; nothing is claimed in `send_log`, so the next run retries.
+- **Summaries are optional**, since many aren't written yet. Without the week's SUMMARY the email links only the TEXT ("Please find attached the Text for this week's mishnayos:"). Without the Shabbos perakim PDF the Shabbos section and the `| <perakim>` part of the subject are left out.
+- **Subject** `Chazara: Shabbos 22.6 - Eiruvin 1.9 | Shabbos 7-8`, **preview text** `Shabbos 7-8`. With no perakim the `| …` part and the Shabbos section are left out (the preview text is then the range).
+- **Body** follows the manual send: "Please find attached the Text and Chazara Summaries for this week's mishnayos:" with TEXT and SUMMARY links, then "…for this Shabbos's mishnayos:" with `Shabbos Perakim 7-8`, inside the daily email's layout and footer (no calendar image).
 - `special_date` and `additional_notice` are shown when present.
 
 ### Programs and channels

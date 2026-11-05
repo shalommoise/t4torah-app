@@ -61,6 +61,12 @@ describe('buildCampaignRequests', () => {
       'Time4Mishna – Monday 28 Sep | 17 Tishrei | Chol HaMoed Sukkos'
     );
   });
+
+  test('sets the preview text when the message has one', () => {
+    const msg = message({ email: { subject: 's', previewText: 'Shabbos 5-6', html: '*|UNSUB|*', text: '' } });
+    expect(buildCampaignRequests(msg, CONFIG).campaign.settings.preview_text).toBe('Shabbos 5-6');
+    expect(buildCampaignRequests(message(), CONFIG).campaign.settings).not.toHaveProperty('preview_text');
+  });
 });
 
 describe('planDelivery', () => {
