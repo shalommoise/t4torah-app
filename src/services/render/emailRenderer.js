@@ -155,42 +155,37 @@ const renderAppLinksHtml = () =>
   ].join('\n');
 
 /**
- * Renders the daily email body (HTML and plain text) from `getDailyContent`
- * output, in the Time4Torah email design. The subject line is built
- * separately (see subjectLine.js).
+ * Renders the shared email layout around a body: banner, date header, special
+ * date, the body itself, app links, sign-off, donation lines, optional
+ * calendar, social icons and unsubscribe link. Used by the daily email and the
+ * Friday chazara email.
  *
- * Links: SHIUR/TEXT for regular Time4Mishna shiurim (needs `bucketUrl`), the
- * fixed Time4Torah links in emailLinks.js, and the unsubscribe link when
- * `unsubscribeUrl` is set. URLs in database text are stripped.
- *
- * `extras` (from emailExtrasService.getEmailExtras) adds the files found in
- * the bucket: the Overview/Key Terms links under each Time4Mishna shiur and
- * the calendar image, below the donation lines as in the manual send. Both
- * only appear in emails that include Time4Mishna.
- *
- * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
- * @param {{ program: 'time4mishna'|'time4nach'|'combined', bucketUrl?: string|null,
- *   assetsUrl?: string|null, unsubscribeUrl?: string|null,
- *   extras?: { calendarUrl: string|null, summaryUrls: string[] } }} options
+ * @param {object} options
+ * @param {'time4mishna'|'time4nach'|'combined'} options.program
+ * @param {object} options.dateRow A dates_table row.
+ * @param {string|null} [options.assetsUrl]
+ * @param {string|null} [options.unsubscribeUrl]
+ * @param {string|null} [options.calendarUrl]
+ * @param {string|null} [options.intro] Plain-text intro line above the body.
+ * @param {string} options.bodyHtml Already escaped.
+ * @param {string[]} options.bodyText Plain-text blocks, joined with blank lines.
  * @returns {{ html: string, text: string }}
  */
-const renderEmail = (
-  content,
-  { program, bucketUrl = null, assetsUrl = null, unsubscribeUrl = null, extras = NO_EXTRAS }
-) => {
-  assertRenderable(content, program);
-
-  const dateRow = content.date;
+const renderEmailLayout = ({
+  program,
+  dateRow,
+  assetsUrl = null,
+  unsubscribeUrl = null,
+  calendarUrl = null,
+  intro = null,
+  bodyHtml,
+  bodyText,
+}) => {
   const title = PROGRAM_TITLES[program];
   const studyName = STUDY_NAMES[program];
   const gregorianDate = formatGregorianDate(dateRow.gregorian_date);
   const specialDate = stripLinks(dateRow.special_date);
-  const sections = getSections(content, program, { bucketUrl, summaryUrls: extras.summaryUrls });
-  const calendarUrl = includesMishna(program) ? extras.calendarUrl : null;
-  const showTitles = program === 'combined';
-  const hasFileLinks = sections.some((section) => section.items.some((item) => item.links));
   const isFriday = dateRow.day_of_week === 'Friday';
-  const intro = hasFileLinks ? `Please find attached the Shiur and Text for today's ${studyName}:` : null;
 
   const linkValues = Object.fromEntries(
     Object.entries(STATIC_LINKS).map(([name, href]) => [`link_${name}`, escapeHtml(href)])
@@ -208,7 +203,7 @@ const renderEmail = (
       ? `<p style="margin:8px 0 0 0;font-weight:bold;color:#8a4b00;">${escapeHtml(specialDate)}</p>`
       : '',
     intro: intro ? `<p style="margin:24px 0 0 0;">${escapeHtml(intro)}</p>` : '',
-    sections: sections.map((section) => renderSectionHtml(section, showTitles)).join('\n'),
+    sections: bodyHtml,
     calendar: calendarUrl ? renderCalendarHtml(calendarUrl) : '',
     appLinks: includesMishna(program) ? renderAppLinksHtml() : '',
     socialIcons: renderSocialIconsHtml(),
@@ -247,7 +242,7 @@ const renderEmail = (
   const blocks = [
     headerLines.join('\n'),
     intro,
-    ...sections.map((section) => renderSectionText(section, showTitles)),
+    ...bodyText,
     appLines,
     signOff.join('\n'),
     calendarUrl ? `Calendar: ${calendarUrl}` : null,
@@ -258,4 +253,46 @@ const renderEmail = (
   return { html, text };
 };
 
-module.exports = { renderEmail, renderTemplate, escapeHtml, formatGregorianDate };
+/**
+ * Renders the daily email body (HTML and plain text) from `getDailyContent`
+ * output, in the Time4Torah email design. The subject line is built
+ * separately (see subjectLine.js).
+ *
+ * Links: SHIUR/TEXT for regular Time4Mishna shiurim (needs `bucketUrl`), the
+ * fixed Time4Torah links in emailLinks.js, and the unsubscribe link when
+ * `unsubscribeUrl` is set. URLs in database text are stripped.
+ *
+ * `extras` (from emailExtrasService.getEmailExtras) adds the files found in
+ * the bucket: the Overview/Key Terms links under each Time4Mishna shiur and
+ * the calendar image, below the donation lines as in the manual send. Both
+ * only appear in emails that include Time4Mishna.
+ *
+ * @param {{ date: object, time4mishna: object[], time4nach: object[] }} content
+ * @param {{ program: 'time4mishna'|'time4nach'|'combined', bucketUrl?: string|null,
+ *   assetsUrl?: string|null, unsubscribeUrl?: string|null,
+ *   extras?: { calendarUrl: string|null, summaryUrls: string[] } }} options
+ * @returns {{ html: string, text: string }}
+ */
+const renderEmail = (
+  content,
+  { program, bucketUrl = null, assetsUrl = null, unsubscribeUrl = null, extras = NO_EXTRAS }
+) => {
+  assertRenderable(content, program);
+
+  const sections = getSections(content, program, { bucketUrl, summaryUrls: extras.summaryUrls });
+  const showTitles = program === 'combined';
+  const hasFileLinks = sections.some((section) => section.items.some((item) => item.links));
+
+  return renderEmailLayout({
+    program,
+    dateRow: content.date,
+    assetsUrl,
+    unsubscribeUrl,
+    calendarUrl: includesMishna(program) ? extras.calendarUrl : null,
+    intro: hasFileLinks ? `Please find attached the Shiur and Text for today's ${STUDY_NAMES[program]}:` : null,
+    bodyHtml: sections.map((section) => renderSectionHtml(section, showTitles)).join('\n'),
+    bodyText: sections.map((section) => renderSectionText(section, showTitles)),
+  });
+};
+
+module.exports = { renderEmail, renderEmailLayout, renderTemplate, escapeHtml, formatGregorianDate, link };

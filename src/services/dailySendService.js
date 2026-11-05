@@ -9,6 +9,8 @@ const { renderWhatsapp } = require('./render/whatsappRenderer');
 const { buildSubject } = require('./render/subjectLine');
 const { getSections } = require('./render/dailySections');
 const { getEmailExtras } = require('./emailExtrasService');
+const { getChazara } = require('./chazaraService');
+const { renderChazaraEmail } = require('./render/chazaraEmail');
 const {
   claimSendLog,
   reclaimFailedSendLog,
@@ -45,6 +47,23 @@ const PROVIDER_ID_MAX_LENGTH = 255;
 
 const errorMessage = (error) => (error && error.message) || String(error);
 
+// Only the Time4Mishna email becomes the chazara email on a chazara Friday.
+const usesChazara = (program) => program === 'time4mishna';
+
+/**
+ * getChazara, with a failure returned rather than thrown, so a missing PDF
+ * fails only the Time4Mishna email.
+ *
+ * @returns {Promise<{ chazara: object|null, error: Error|null }>}
+ */
+const loadChazara = async (content, emailConfig) => {
+  try {
+    return { chazara: await getChazara(content, emailConfig), error: null };
+  } catch (error) {
+    return { chazara: null, error };
+  }
+};
+
 /**
  * Renders one program's DailyMessage from `getDailyContent` output.
  *
@@ -54,17 +73,23 @@ const errorMessage = (error) => (error && error.message) || String(error);
  *   Defaults to getEmailConfig(process.env).
  * @param {{ calendarUrl: string|null, summaryUrls: string[] }} [extras] getEmailExtras output;
  *   without it the email has no calendar or summary links.
+ * @param {import('./chazaraService').Chazara|null} [chazara] getChazara output; on a chazara
+ *   Friday the Time4Mishna email is the chazara email instead.
  * @returns {import('./render/dailyMessage').DailyMessage}
  */
-const renderDailyMessage = (content, program, emailConfig = getEmailConfig(process.env), extras) => {
+const renderDailyMessage = (content, program, emailConfig = getEmailConfig(process.env), extras, chazara) => {
   const shiurLabels = getSections(content, program).flatMap((section) => section.items.map((item) => item.label));
+  const email =
+    chazara && usesChazara(program)
+      ? renderChazaraEmail(content, chazara, emailConfig)
+      : {
+          subject: buildSubject(content.date, program, shiurLabels),
+          ...renderEmail(content, { program, ...emailConfig, ...(extras && { extras }) }),
+        };
   return createDailyMessage({
     date: content.date.gregorian_date,
     program,
-    email: {
-      subject: buildSubject(content.date, program, shiurLabels),
-      ...renderEmail(content, { program, ...emailConfig, ...(extras && { extras }) }),
-    },
+    email,
     whatsapp: renderWhatsapp(content, { program, bucketUrl: emailConfig.bucketUrl }),
   });
 };
@@ -238,11 +263,15 @@ const runDailySend = async ({
 
   const activeChannels = [...new Set(senders.map((sender) => sender.channel))];
   const extras = await getEmailExtras(content, emailConfig);
+  const { chazara, error: chazaraError } = await loadChazara(content, emailConfig);
   const results = [];
   for (const program of programs) {
     let message;
     try {
-      message = renderDailyMessage(content, program, emailConfig, extras);
+      if (chazaraError && usesChazara(program)) {
+        throw chazaraError;
+      }
+      message = renderDailyMessage(content, program, emailConfig, extras, chazara);
     } catch (error) {
       senders.forEach((sender) =>
         results.push({ program, channel: sender.channel, sender: null, ok: false, error: `Render failed: ${errorMessage(error)}` })
@@ -264,4 +293,4 @@ const runDailySend = async ({
   return { ...report, status, ok: status === 'sent', results };
 };
 
-module.exports = { runDailySend, renderDailyMessage };
+module.exports = { runDailySend, renderDailyMessage, usesChazara };

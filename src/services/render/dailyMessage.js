@@ -8,7 +8,8 @@
  * @typedef {object} DailyMessage
  * @property {string} date Gregorian date, `YYYY-MM-DD`.
  * @property {DailyMessageProgram} program
- * @property {{ subject: string, html: string, text: string }} email
+ * @property {{ subject: string, html: string, text: string, previewText?: string }} email
+ *   `previewText` (optional) is the inbox preview line.
  * @property {{ text: string, attachments: WhatsappAttachment[] }} whatsapp
  */
 
@@ -45,7 +46,7 @@ const isString = (value) => typeof value === 'string';
  * @param {object} fields
  * @param {string} fields.date
  * @param {DailyMessageProgram} fields.program
- * @param {{ subject: string, html: string, text: string }} fields.email
+ * @param {{ subject: string, html: string, text: string, previewText?: string }} fields.email
  * @param {{ text: string, attachments?: WhatsappAttachment[] }} fields.whatsapp  `attachments` defaults to [].
  * @returns {DailyMessage}
  */
@@ -58,6 +59,9 @@ const createDailyMessage = ({ date, program, email, whatsapp } = {}) => {
   }
   if (!email || !isString(email.subject) || !isString(email.html) || !isString(email.text)) {
     throw new TypeError('DailyMessage.email must have string subject, html and text');
+  }
+  if (email.previewText !== undefined && !isString(email.previewText)) {
+    throw new TypeError('DailyMessage.email.previewText must be a string when set');
   }
   if (!whatsapp || !isString(whatsapp.text)) {
     throw new TypeError('DailyMessage.whatsapp must have a string text');
@@ -72,7 +76,12 @@ const createDailyMessage = ({ date, program, email, whatsapp } = {}) => {
   return {
     date,
     program,
-    email: { subject: email.subject, html: email.html, text: email.text },
+    email: {
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      ...(email.previewText !== undefined && { previewText: email.previewText }),
+    },
     whatsapp: {
       text: whatsapp.text,
       attachments: attachments.map(({ type, url, filename }) => ({ type, url, filename })),

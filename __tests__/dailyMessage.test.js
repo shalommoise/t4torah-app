@@ -27,6 +27,16 @@ describe('createDailyMessage', () => {
     expect(message.whatsapp.attachments).toEqual(attachments);
   });
 
+  test('keeps an optional email previewText', () => {
+    const message = createDailyMessage({ ...validFields(), email: { ...validFields().email, previewText: 'Shabbos 5-6' } });
+    expect(message.email.previewText).toBe('Shabbos 5-6');
+    expect(createDailyMessage(validFields()).email).not.toHaveProperty('previewText');
+  });
+
+  test('throws on a non-string previewText', () => {
+    expect(() => createDailyMessage({ ...validFields(), email: { ...validFields().email, previewText: 5 } })).toThrow('previewText');
+  });
+
   test('drops unknown fields', () => {
     const fields = validFields();
     fields.extra = 1;
