@@ -102,8 +102,35 @@ const selectTime4NachScheduleByDateId = async (dateId) => {
   return rows;
 };
 
+/**
+ * The months that have Time4Mishna schedule rows, oldest first, from
+ * `fromDate` (YYYY-MM-DD) on; every month when `fromDate` is null.
+ *
+ * @param {string|null} fromDate
+ * @returns {Promise<{ year: number, month: number }[]>}
+ */
+const selectTime4MishnaScheduleMonths = async (fromDate = null) => {
+  const params = [];
+  let where = '';
+  if (fromDate) {
+    where = 'WHERE d.gregorian_date >= ?';
+    params.push(fromDate);
+  }
+  const [rows] = await query(
+    `SELECT YEAR(d.gregorian_date) AS year, MONTH(d.gregorian_date) AS month
+    FROM time4mishna_daily_schedule ds
+    JOIN dates_table d ON d.date_id = ds.date_id
+    ${where}
+    GROUP BY year, month
+    ORDER BY year, month`,
+    params
+  );
+  return rows.map((row) => ({ year: Number(row.year), month: Number(row.month) }));
+};
+
 module.exports = {
   selectDates,
+  selectTime4MishnaScheduleMonths,
   selectDateById,
   selectTime4MishnaScheduleByDateId,
   selectTime4NachScheduleByDateId,

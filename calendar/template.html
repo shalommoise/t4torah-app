@@ -384,6 +384,20 @@
       }
     }
 
+    /* ===== PNG export (URL ends in #export): just the card, no page around it ===== */
+    body.export {
+      background: transparent;
+    }
+
+    body.export .pages {
+      padding: 0;
+      gap: 0;
+    }
+
+    body.export .page {
+      box-shadow: none;
+    }
+
     /* ===== Responsive ===== */
     @media (max-width: 900px) {
       .topbar {
@@ -722,7 +736,26 @@
       pagesEl.appendChild(page);
     };
 
+    // Export mode: the PNG exporter reads data-export-height (from --dump-dom)
+    // and screenshots a viewport exactly the card's size.
+    const isExport = window.location.hash === "#export";
+    if (isExport) {
+      document.body.classList.add("export");
+    }
+
     buildCalendar(calendarData);
+
+    if (isExport) {
+      // After "load" so the header images are in and the height is final.
+      window.addEventListener("load", () => {
+        const page = pagesEl.firstElementChild;
+        if (page) {
+          document.body.dataset.exportHeight = String(
+            Math.ceil(page.getBoundingClientRect().height)
+          );
+        }
+      });
+    }
   </script>
 </body>
 
