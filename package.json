@@ -14,6 +14,8 @@
     "send:daily": "node ./jobs/dailySend.js",
     "import:summaries": "node ./jobs/importSummarySheets.js",
     "send:test": "node ./jobs/sendTest.js",
+    "sends:preview": "node ./jobs/previewSend.js",
+    "sends:log": "node ./jobs/showSendLog.js",
     "castos:publish": "node ./jobs/publishCastosEpisode.js",
     "calendars:export": "node ./jobs/exportCalendars.js"
   },
