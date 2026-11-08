@@ -99,7 +99,7 @@ describe('GET /time4mishna/shiurim/:shiurId', () => {
     selectTime4MishnaShiurById.mockRejectedValue(new Error('connection lost'));
     const res = await request(app).get(`${API}/shiurim/1`);
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'connection lost' });
+    expect(res.body).toEqual({ error: 'Internal server error' });
   });
 });
 

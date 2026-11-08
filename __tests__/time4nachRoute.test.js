@@ -108,7 +108,7 @@ describe('GET /time4nach/schedule', () => {
     selectTime4NachSchedule.mockRejectedValue(new Error('connection lost'));
     const res = await request(app).get(`${API}/schedule`);
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'connection lost' });
+    expect(res.body).toEqual({ error: 'Internal server error' });
   });
 });
 
