@@ -16,6 +16,7 @@ const { createCastosClient } = require('../../src/services/castos/client');
 const { getCastosConfig } = require('../../src/config/castos');
 const { fetchAudio, prepareAudio } = require('../../src/services/castos/audio');
 const { computePublishPlan } = require('../../src/services/castos/publishPlan');
+const { getCreatedEpisodeId } = require('../../src/services/castos/publishEpisodeService');
 
 const ENABLED = process.env.RUN_CASTOS_INTEGRATION === '1';
 const AUDIO_PATH = process.env.CASTOS_INTEGRATION_AUDIO_PATH || 'mishna/shiurim/shabbos_19.4-20.1.mp3';
@@ -105,7 +106,7 @@ describeIf('Castos API (live calls, test show only)', () => {
       { post_title: title, post_content: '<p>Integration test episode (a).</p>', post_date: plan.post_date },
       audio
     );
-    const id = response && response.data && (response.data.id || response.data.episode_id);
+    const id = getCreatedEpisodeId(response);
     report.a = {
       sent_post_date: plan.post_date,
       sent_post_date_zone: config.timeZone,
@@ -124,7 +125,7 @@ describeIf('Castos API (live calls, test show only)', () => {
         post_content: '<p>Integration test episode (b): episode_file sent as a URL.</p>',
         episode_file: `${bucketUrl}/${AUDIO_PATH}`,
       });
-      const id = response && response.data && (response.data.id || response.data.episode_id);
+      const id = getCreatedEpisodeId(response);
       report.b = {
         accepted: true,
         create_response: response,
