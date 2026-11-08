@@ -14,7 +14,8 @@
     "send:daily": "node ./jobs/dailySend.js",
     "import:summaries": "node ./jobs/importSummarySheets.js",
     "send:test": "node ./jobs/sendTest.js",
-    "castos:publish": "node ./jobs/publishCastosEpisode.js"
+    "castos:publish": "node ./jobs/publishCastosEpisode.js",
+    "calendars:export": "node ./jobs/exportCalendars.js"
   },
   "repository": {
     "type": "git",
