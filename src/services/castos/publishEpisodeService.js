@@ -12,15 +12,22 @@ const {
 } = require('./episode');
 
 /**
- * The new episode's id from a create response. The spec doesn't document the
- * response body, so this checks the likely places.
+ * The new episode's id from a create response. Castos returns the episode
+ * under `episode` (`{ success, message, episode: { id, … }, file, status,
+ * errors }`), which the spec doesn't document; `data` and the top level are
+ * kept as fallbacks.
  *
  * @param {any} body
  * @returns {number|string|null}
  */
 const getCreatedEpisodeId = (body) => {
-  const data = body && body.data;
-  const candidates = [data && data.id, data && data.episode_id, body && body.id, body && body.episode_id];
+  const candidates = [
+    body?.episode?.id,
+    body?.data?.id,
+    body?.data?.episode_id,
+    body?.id,
+    body?.episode_id,
+  ];
   const id = candidates.find((value) => value !== undefined && value !== null && value !== '');
   return id === undefined ? null : id;
 };

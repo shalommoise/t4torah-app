@@ -153,7 +153,8 @@ const createCastosClient = ({
     },
     /**
      * POST /podcasts/{id}/episodes as multipart/form-data. Returns the whole
-     * response body, since the spec doesn't say what it contains.
+     * response body (undocumented in the spec); the new episode is under
+     * `episode`, e.g. `{ success: true, episode: { id: 123, … } }`.
      *
      * @param {string} podcastId
      * @param {Record<string, string|number|null|undefined>} fields post_title, post_content, post_date, …

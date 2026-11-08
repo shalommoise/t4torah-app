@@ -26,7 +26,8 @@ const content = (overrides = {}) => ({
 const setup = ({ episodes = [], audio = MP3, now = new Date('2026-11-02T21:00:00Z') } = {}) => {
   const client = {
     listEpisodes: jest.fn().mockResolvedValue(episodes),
-    createEpisode: jest.fn().mockResolvedValue({ success: true, data: { id: 777 } }),
+    // Shaped like a real Castos create response: the episode is under `episode`.
+    createEpisode: jest.fn().mockResolvedValue({ success: true, message: 'Episode created!', episode: { id: 777 } }),
   };
   const deps = {
     fetchAudio: jest.fn().mockResolvedValue(audio),
@@ -153,11 +154,20 @@ describe('publishDailyEpisode', () => {
 });
 
 describe('getCreatedEpisodeId', () => {
+  test('reads the id from the episode key (the shape Castos returns)', () => {
+    expect(getCreatedEpisodeId({ success: true, episode: { id: 123 } })).toBe(123);
+  });
+
+  test('prefers episode.id over data.id', () => {
+    expect(getCreatedEpisodeId({ episode: { id: 123 }, data: { id: 5 } })).toBe(123);
+  });
+
   test.each([
     [{ data: { id: 5 } }, 5],
     [{ data: { episode_id: 6 } }, 6],
     [{ id: 7 }, 7],
     [{ success: true }, null],
+    [{ success: true, episode: {} }, null],
     [undefined, null],
   ])('%j → %s', (body, expected) => {
     expect(getCreatedEpisodeId(body)).toBe(expected);
