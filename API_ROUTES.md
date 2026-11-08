@@ -34,12 +34,14 @@ All routes are `GET` only.
 ## Static Assets
 
 - `GET /imgs/:filename`
-  - Serves calendar image assets from the repo root `imgs` folder.
+  - Serves `.png` and `.svg` image assets from the repo root `imgs` folder.
   - Example: `curl http://localhost:3000/imgs/wholeHeader.png --output wholeHeader.png`
 
-- `GET /calendar-files/:path`
-  - Serves files from the `calendar` folder, including generated HTML, JSON, PDF, and PNG files.
-  - Example: `curl http://localhost:3000/calendar-files/generated/calendar_04_2026.pdf --output calendar_04_2026.pdf`
+- `GET /calendar-files/generated/:filename`
+  - Serves the exported calendar PDFs and PNGs from `calendar/generated`. Nothing else under `calendar/` is public (templates, data JSON and generated HTML return 404).
+  - Examples:
+    - `curl http://localhost:3000/calendar-files/generated/calendar_04_2026.pdf --output calendar_04_2026.pdf`
+    - `curl http://localhost:3000/calendar-files/generated/T4M-04-26.png --output T4M-04-26.png`
 
 ## Health
 
