@@ -14,20 +14,22 @@ All routes are `GET` only.
 
 - `GET /calendar`
   - Generates month assets and returns the rendered HTML calendar page.
-  - Query params: `month`, `year`
+  - Query params: `month` (1-12), `year` (2000-2100); anything else returns 400.
   - Example: `curl "http://localhost:3000/calendar?month=4&year=2026"`
 
-- `GET /calendar/export`
+- `GET /calendar/export` (admin only)
   - Generates export files for a month calendar.
-  - Query params: `month`, `year`, `format`
+  - Requires `Authorization: Bearer $SENDS_ADMIN_TOKEN`: 401 without a valid token, 503 when the variable is unset.
+  - Prefer `npm run calendars:export`, which does the same without HTTP.
+  - Query params: `month` (1-12), `year` (2000-2100), `format`
   - `format` may be `pdf`, `png`, or `all`
   - `pdf` returns the generated PDF file
   - `png` returns the generated PNG file
   - `all` returns JSON with both generated file paths
   - Examples:
-    - `curl -OJ "http://localhost:3000/calendar/export?month=4&year=2026&format=pdf"`
-    - `curl -OJ "http://localhost:3000/calendar/export?month=4&year=2026&format=png"`
-    - `curl "http://localhost:3000/calendar/export?month=4&year=2026&format=all"`
+    - `curl -OJ -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/calendar/export?month=4&year=2026&format=pdf"`
+    - `curl -OJ -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/calendar/export?month=4&year=2026&format=png"`
+    - `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/calendar/export?month=4&year=2026&format=all"`
 
 ## Static Assets
 

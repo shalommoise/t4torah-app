@@ -8,6 +8,10 @@ const DATA_DIR = path.join(CALENDAR_DIR, 'data');
 const GENERATED_DIR = path.join(CALENDAR_DIR, 'generated');
 const TEMPLATE_PATH = path.join(CALENDAR_DIR, 'template.html');
 
+/** Calendar years accepted from callers; anything outside is rejected before any DB query or file write. */
+const MIN_YEAR = 2000;
+const MAX_YEAR = 2100;
+
 const parseMonthYear = ({ month, year }) => {
   const parsedMonth = Number(month);
   const parsedYear = Number(year);
@@ -17,9 +21,10 @@ const parseMonthYear = ({ month, year }) => {
     parsedMonth < 1 ||
     parsedMonth > 12 ||
     !Number.isInteger(parsedYear) ||
-    parsedYear < 1
+    parsedYear < MIN_YEAR ||
+    parsedYear > MAX_YEAR
   ) {
-    const error = new Error('month must be 1-12 and year must be a positive number');
+    const error = new Error(`month must be 1-12 and year must be ${MIN_YEAR}-${MAX_YEAR}`);
     error.status = 400;
     throw error;
   }
@@ -146,4 +151,6 @@ module.exports = {
   buildCalendarJson,
   generateCalendarAssets,
   parseMonthYear,
+  MIN_YEAR,
+  MAX_YEAR,
 };
