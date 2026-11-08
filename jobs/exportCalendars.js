@@ -61,7 +61,7 @@ const loadDefaultDeps = () => ({
   now: new Date(),
   exportScheduledCalendars: require('../src/services/calendarBatchService').exportScheduledCalendars,
   // Required lazily so --help and usage errors never create the pool.
-  closePool: () => require('../src/config/env').pool.end(),
+  closePool: () => require('../src/config/env').closePool(),
   log: (line) => console.log(line),
   error: (line) => console.error(line),
 });

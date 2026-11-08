@@ -194,7 +194,7 @@ if (require.main === module) {
       console.error(fatal);
       process.exitCode = EXIT_FAILURE;
     })
-    .finally(() => require('../src/config/env').pool.end());
+    .finally(() => require('../src/config/env').closePool());
 }
 
 module.exports = { parseArgs, formatImportReport, main, UsageError, USAGE };
