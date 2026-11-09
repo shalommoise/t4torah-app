@@ -6,6 +6,8 @@ Calendar and static asset routes are served outside `/api/v1`.
 
 All routes are `GET` only.
 
+Every route is rate limited per client: 300 requests per 15 minutes by default, and 30 for `/calendar` and `/calendar/export`. Over the limit the response is `429` with `{ "error": "Too many requests, try again later" }`; `RateLimit` headers show the remaining budget. Limits are set in `.env` (`RATE_LIMIT_*`, `TRUST_PROXY`).
+
 ## Calendar Pages
 
 - `GET /calendar/maker`
