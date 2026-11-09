@@ -1,6 +1,10 @@
 const http = require('http');
+const { port, useDatabaseRole } = require('./config/env');
+
+// The public API only reads. Set the role before the app (and its models) load.
+useDatabaseRole('read');
+
 const app = require('./app');
-const { port } = require('./config/env');
 
 const server = http.createServer(app);
 

@@ -89,7 +89,7 @@ const loadDefaultDeps = () => {
     createMailchimpClient,
     sendTestEmail,
     // Required lazily so --help and usage errors never create the pool.
-    closePool: () => require('../src/config/env').pool.end(),
+    closePool: () => require('../src/config/env').closePool(),
     log: (line) => console.log(line),
     error: (line) => console.error(line),
   };

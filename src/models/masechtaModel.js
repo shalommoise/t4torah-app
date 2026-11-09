@@ -1,4 +1,4 @@
-const {getConnection, pool } = require(`../config/env`);
+const { getConnection } = require(`../config/env`);
 
 const selectMasechtos = async () => {
     const connection = await getConnection();
