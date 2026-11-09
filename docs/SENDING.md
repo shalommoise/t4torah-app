@@ -35,7 +35,7 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 | Config | `src/config/send.js`, `src/config/mailchimp.js` | `getSendConfig(env)`, `getMailchimpConfig(env)`. |
 | Send log | `src/models/sendLogModel.js`, `send_log` table | Stops a program/channel from going out twice on the same date. |
 | London dates | `src/utils/londonDate.js` | `londonToday`, `londonTomorrow`, `addDays`; handles BST/GMT. |
-| Preview API | `src/routes/sendsRouter.js` (bearer token: `src/middleware/requireSendsAdminToken.js`) → `src/controllers/sendsController.js` → `sendPreviewService.js` / `sendLogService.js` | See [API_ROUTES.md](../API_ROUTES.md#sends). |
+| Preview and log commands | `jobs/previewSend.js` → `sendPreviewService.js`; `jobs/showSendLog.js` → `sendLogService.js` | `npm run sends:preview`, `npm run sends:log`. See [Previewing](#previewing). |
 
 ### Content rules
 
@@ -74,7 +74,7 @@ Set these in `.env` (see [`.env.example`](../.env.example)). Unset or blank valu
 | `SEND_CHANNELS` | `email,whatsapp` | comma-separated `email`, `whatsapp` |
 | `SEND_PROGRAMS` | `time4mishna,time4nach` | comma-separated `time4mishna`, `time4nach`, `combined` |
 | `OUTBOX_DIR` | `outbox` | folder for dry-run files (gitignored); relative to the working directory |
-| `SENDS_ADMIN_TOKEN` | *(unset → 503)* | bearer token for `/api/v1/sends/*` and `GET /calendar/export` (API server only, not the job) |
+| `SENDS_ADMIN_TOKEN` | *(unset → 503)* | bearer token for `GET /calendar/export` (API server only, not the job) |
 | `BUCKET_PATH` | *(unset → no SHIUR/TEXT links)* | public base URL of the shiurim bucket; **required for a live send** |
 | `EMAIL_ASSETS_URL` | `<BUCKET_PATH>/email` | where the logo images are (`time4mishna-header_logo.png`, the white Time4Mishna header logo, and `Time-4-Torah-logo_NEW.png` uploaded from `imgs/`); without it the banner shows the title as text |
 | `EMAIL_UNSUBSCRIBE_URL` | *(unset → no footer link)* | the provider's unsubscribe link or merge tag; **`*\|UNSUB\|*` for Mailchimp** (required) |
@@ -104,25 +104,23 @@ The masechta name is spelled as in `masechta_table`.
 
 ## Previewing
 
-The preview and log routes need `SENDS_ADMIN_TOKEN` set on the server (see `.env.example`) and the same value sent as a bearer token. Without the variable they return `503`; with a missing or wrong token, `401`.
-
-With the API running (`npm start` or `npm run dev`):
+Previews and the send log are commands, run where the jobs run (they need the `DATABASE_*` variables, not the API server):
 
 ```sh
-AUTH="Authorization: Bearer $SENDS_ADMIN_TOKEN"
-
-# Rendered email + WhatsApp as JSON (program defaults to time4mishna)
-curl -H "$AUTH" "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&program=time4nach"
+# Rendered email + WhatsApp as JSON (date defaults to today, program to time4mishna)
+npm run sends:preview -- --date=2026-09-28 --program=time4nach
 
 # Just one channel
-curl -H "$AUTH" "http://localhost:3000/api/v1/sends/preview?date=2026-09-28&channel=whatsapp"
+npm run sends:preview -- --date=2026-09-28 --channel=whatsapp
 
-# The email itself: save it, then open the file in a browser
-curl -H "$AUTH" "http://localhost:3000/api/v1/sends/preview.html?date=2026-09-28&program=combined" --output preview.html
+# The email itself: write it to a file, then open the file in a browser
+npm run sends:preview -- --date=2026-09-28 --program=combined --html=preview.html
 
 # What has been sent for a date
-curl -H "$AUTH" "http://localhost:3000/api/v1/sends/log?date=2026-09-28"
+npm run sends:log -- --date=2026-09-28
 ```
+
+Exit codes: `0` ok, `1` failure or date not in `dates_table`, `2` usage error (including a bad program or channel).
 
 The preview renders exactly what the job would send. `sendDay: false` means the job would skip that date (Shabbos/Yom Tov). Previews never send anything or write to `send_log`.
 
@@ -263,7 +261,7 @@ EMAIL_UNSUBSCRIBE_URL=*|UNSUB|*
 ### First live send
 
 1. Dry-run with the Mailchimp variables set: `npm run send:daily -- --date=<a send day>`. Check `outbox/<date>/email-time4mishna.html` and `.mailchimp.json`.
-2. Point `MAILCHIMP_AUDIENCE_ID` at a **test audience** containing only yourself, then `npm run send:daily -- --dry-run=false --date=<tomorrow's send day>`. The campaign is scheduled for 05:15; check it in Mailchimp (you can unschedule it there), and `GET /api/v1/sends/log?date=…`.
+2. Point `MAILCHIMP_AUDIENCE_ID` at a **test audience** containing only yourself, then `npm run send:daily -- --dry-run=false --date=<tomorrow's send day>`. The campaign is scheduled for 05:15; check it in Mailchimp (you can unschedule it there), and `npm run sends:log -- --date=…`.
 3. Switch to the real audience ID and add the cron line.
 
 ## WhatsApp provider (checklist)
@@ -277,5 +275,5 @@ EMAIL_UNSUBSCRIBE_URL=*|UNSUB|*
 4. **Attachments:** send `message.whatsapp.attachments` as media messages (audio + document) by URL. The bucket files must be publicly reachable. Check with the BSP how this works for a broadcast: business-initiated messages need an approved template, and template headers support documents but (as far as we know) not audio, so the mp3 may have to go as a document or as a follow-up message. Also confirm whether the BSP can post to the existing WhatsApp groups or only to individual numbers.
 5. **Templates:** check that the rendered text fits the BSP's template/variable rules, and whether the 1,000-character cap (`WHATSAPP_MAX_LENGTH`) should change.
 6. **Tests:** mock the provider's HTTP client and never call the real API in tests (`npm run test:ci` must stay offline).
-7. **Try it safely first:** send to a test number with `SEND_MODE=live` and `--dry-run=false --channel=whatsapp --date=<a test date>`, then check `GET /api/v1/sends/log`.
+7. **Try it safely first:** send to a test number with `SEND_MODE=live` and `--dry-run=false --channel=whatsapp --date=<a test date>`, then check `npm run sends:log -- --date=<the test date>`.
 8. **Only then** add `whatsapp` to `SEND_CHANNELS` on the server.

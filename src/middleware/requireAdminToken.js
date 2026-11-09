@@ -9,18 +9,19 @@ const digest = (value) => crypto.createHash('sha256').update(value, 'utf8').dige
 const tokensMatch = (provided, expected) => crypto.timingSafeEqual(digest(provided), digest(expected));
 
 /**
- * Protects the /api/v1/sends routes with `Authorization: Bearer <token>`,
- * matched against SENDS_ADMIN_TOKEN. Fails closed: when the variable is unset
- * or blank, every request gets 503 rather than open access.
+ * Protects admin-only routes (GET /calendar/export) with
+ * `Authorization: Bearer <token>`, matched against SENDS_ADMIN_TOKEN.
+ * Fails closed: when the variable is unset or blank, every request gets 503
+ * rather than open access.
  *
  * @param {{ getToken?: () => string|undefined }} [options] Reads the env var per request by default.
  */
-const requireSendsAdminToken =
+const requireAdminToken =
   ({ getToken = () => process.env.SENDS_ADMIN_TOKEN } = {}) =>
   (req, res, next) => {
     const expected = getToken();
     if (typeof expected !== 'string' || expected.trim() === '') {
-      return res.status(503).json({ error: 'Sends admin API is not configured (SENDS_ADMIN_TOKEN is not set)' });
+      return res.status(503).json({ error: 'Admin API is not configured (SENDS_ADMIN_TOKEN is not set)' });
     }
 
     const match = BEARER_PATTERN.exec(req.get('authorization') || '');
@@ -31,4 +32,4 @@ const requireSendsAdminToken =
     next();
   };
 
-module.exports = { requireSendsAdminToken };
+module.exports = { requireAdminToken };
