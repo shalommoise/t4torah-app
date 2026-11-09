@@ -112,7 +112,7 @@ const buildCalendarJson = async ({ month, year }) => {
   };
 };
 
-const renderCalendarHtml = async ({ data, assetBasePath = '/calendar-files' }) => {
+const renderCalendarHtml = async ({ data, assetBasePath = '/imgs' }) => {
   const template = await fs.readFile(TEMPLATE_PATH, 'utf8');
 
   return template

@@ -3,12 +3,17 @@ const path = require('path');
 const routes = require('./routes');
 const calendarRouter = require('./routes/calendarRouter');
 const { notFound, errorHandler } = require('./middleware/error');
+const { serveStaticAllowlist } = require('./middleware/staticAllowlist');
 const cors = require("cors");
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use('/imgs', express.static(path.join(process.cwd(), 'imgs')));
-app.use('/calendar-files', express.static(path.join(process.cwd(), 'calendar')));
+app.use('/imgs', serveStaticAllowlist(path.join(process.cwd(), 'imgs'), ['.png', '.svg']));
+// Only the exported calendars are public; templates, data JSON and generated HTML are not.
+app.use(
+  '/calendar-files/generated',
+  serveStaticAllowlist(path.join(process.cwd(), 'calendar', 'generated'), ['.pdf', '.png'])
+);
 app.use(calendarRouter);
 app.use('/api/v1', routes);
 app.use(notFound);
