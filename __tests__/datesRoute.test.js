@@ -85,7 +85,7 @@ describe('GET /dates', () => {
     selectDates.mockRejectedValue(new Error('connection lost'));
     const res = await request(app).get(API);
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'connection lost' });
+    expect(res.body).toEqual({ error: 'Internal server error' });
   });
 
   test('405 for other methods', async () => {
