@@ -1,11 +1,14 @@
 const { query } = require('../config/env');
 
-// One send_log row per (send_date, program, channel, mode); see db/setup.sql.
-// `key` is always { date, program, channel, mode }.
+// One send_log row per (send_date, program, channel, mode, audience); see
+// db/setup.sql. `key` is always { date, program, channel, mode, audience }.
+// `audience` is the Mailchimp audience ID for an email send, and '' when there
+// is none (WhatsApp, or a dry-run without Mailchimp config), so a send to a
+// test audience never blocks the same date's send to the real one.
 
-const keyParams = ({ date, program, channel, mode }) => [date, program, channel, mode];
+const keyParams = ({ date, program, channel, mode, audience = '' }) => [date, program, channel, mode, audience];
 
-const KEY_WHERE = 'send_date = ? AND program = ? AND channel = ? AND mode = ?';
+const KEY_WHERE = 'send_date = ? AND program = ? AND channel = ? AND mode = ? AND audience = ?';
 
 /**
  * Claims a key that has never been attempted by inserting a `claimed` row.
@@ -15,8 +18,8 @@ const KEY_WHERE = 'send_date = ? AND program = ? AND channel = ? AND mode = ?';
 const claimSendLog = async (key) => {
   try {
     await query(
-      `INSERT INTO send_log (send_date, program, channel, mode, status, attempts)
-      VALUES (?, ?, ?, ?, 'claimed', 1)`,
+      `INSERT INTO send_log (send_date, program, channel, mode, audience, status, attempts)
+      VALUES (?, ?, ?, ?, ?, 'claimed', 1)`,
       keyParams(key)
     );
     return true;
@@ -52,8 +55,8 @@ const reclaimFailedSendLog = async (key) => {
  */
 const forceClaimSendLog = async (key) => {
   await query(
-    `INSERT INTO send_log (send_date, program, channel, mode, status, attempts)
-    VALUES (?, ?, ?, ?, 'claimed', 1)
+    `INSERT INTO send_log (send_date, program, channel, mode, audience, status, attempts)
+    VALUES (?, ?, ?, ?, ?, 'claimed', 1)
     ON DUPLICATE KEY UPDATE status = 'claimed', attempts = attempts + 1, provider_message_id = NULL`,
     keyParams(key)
   );
@@ -63,7 +66,7 @@ const forceClaimSendLog = async (key) => {
 /**
  * Records the outcome of a claimed send.
  *
- * @param {{ date: string, program: string, channel: string, mode: string }} key
+ * @param {{ date: string, program: string, channel: string, mode: string, audience?: string }} key
  * @param {{ status: 'sent'|'failed', providerMessageId?: string|null }} outcome
  * @returns {Promise<boolean>} `false` if the row was no longer `claimed`.
  */

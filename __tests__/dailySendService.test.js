@@ -305,7 +305,7 @@ describe('runDailySend invalid calendar rows (G1)', () => {
 const NEEDS_ATTENTION =
   'needs attention: possibly sent (send_log row is still claimed by another run or an interrupted one); use --force to resend';
 
-const key = (program, channel, mode = 'dry-run') => ({ date: '2026-09-28', program, channel, mode });
+const key = (program, channel, mode = 'dry-run', audience = '') => ({ date: '2026-09-28', program, channel, mode, audience });
 
 describe('runDailySend send claim (G2)', () => {
   test('claims, sends, then finishes each program/channel for the date and mode', async () => {
@@ -494,6 +494,25 @@ describe('runDailySend send claim (G2)', () => {
     expect(finishSendLog).toHaveBeenCalledWith(key('time4nach', 'email', 'live'), expect.any(Object));
   });
 
+  test('keys email on the Mailchimp audience, so a test audience does not block the real one', async () => {
+    getDailyContent.mockResolvedValue(content());
+    getSenders.mockReturnValue([fakeSender('live-email', 'email'), fakeSender('live-whatsapp', 'whatsapp')]);
+
+    await runDailySend({
+      date: '2026-09-28',
+      programs: ['time4mishna'],
+      dryRun: false,
+      emailConfig: LIVE_EMAIL_CONFIG,
+      mailchimp: { audienceId: 'test-list' },
+    });
+
+    expect(claimSendLog.mock.calls).toEqual([
+      [key('time4mishna', 'email', 'live', 'test-list')],
+      [key('time4mishna', 'whatsapp', 'live', '')],
+    ]);
+    expect(finishSendLog).toHaveBeenCalledWith(key('time4mishna', 'email', 'live', 'test-list'), expect.any(Object));
+  });
+
   test('a send_log error while claiming blocks that channel only', async () => {
     getDailyContent.mockResolvedValue(content());
     const email = fakeSender('fake-email', 'email');
@@ -558,7 +577,7 @@ describe('runDailySend concurrency (G2)', () => {
   // Every call yields first, so concurrent runs interleave as they would over a network.
   const installFakeSendLog = () => {
     const rows = new Map();
-    const id = (k) => [k.date, k.program, k.channel, k.mode].join('|');
+    const id = (k) => [k.date, k.program, k.channel, k.mode, k.audience].join('|');
     const tick = () => new Promise((resolve) => setImmediate(resolve));
 
     claimSendLog.mockImplementation(async (k) => {

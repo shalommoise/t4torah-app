@@ -114,7 +114,11 @@ CREATE TABLE time4nach_daily_schedule (
 ); 
 
 -- Daily send automation (feature/send-automation).
--- One row per date/program/channel/mode. A job sends only after claiming the
+-- One row per date/program/channel/mode/audience. audience is the Mailchimp
+-- audience ID for an email send and '' when there is none (WhatsApp, or a
+-- dry-run without Mailchimp config), so a test-audience send never blocks the
+-- real audience's send for that date. See db/migrations/002_send_log_audience.sql.
+-- A job sends only after claiming the
 -- row: INSERT a 'claimed' row (duplicate key = already claimed), or flip a
 -- 'failed' row back to 'claimed'; then it sets 'sent' or 'failed'. A row left
 -- 'claimed' (crash mid-send) is never resent automatically.
@@ -124,13 +128,14 @@ CREATE TABLE send_log (
   program ENUM('time4mishna', 'time4nach', 'combined') NOT NULL,
   channel ENUM('email', 'whatsapp') NOT NULL,
   mode ENUM('dry-run', 'live') NOT NULL,
+  audience VARCHAR(64) NOT NULL DEFAULT '',
   status ENUM('claimed', 'sent', 'failed') NOT NULL,
   attempts INT NOT NULL DEFAULT 1,
   provider_message_id VARCHAR(255),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (send_log_id),
-  UNIQUE KEY send_log_once (send_date, program, channel, mode)
+  UNIQUE KEY send_log_once (send_date, program, channel, mode, audience)
 );
 
 -- Summary sheets (feature/summary-sheets); see db/migrations/001_summary_sheets.sql.

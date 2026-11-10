@@ -164,7 +164,9 @@ A date missing from `dates_table` is a failure on purpose: it means the calendar
 
 ### Idempotency (`send_log`)
 
-`send_log` has one row per date/program/channel/mode (unique key), with `status` `claimed`, `sent` or `failed`, plus `attempts`. A run must **claim** the row before sending:
+`send_log` has one row per date/program/channel/mode/audience (unique key), with `status` `claimed`, `sent` or `failed`, plus `attempts`. `audience` is the Mailchimp audience ID (`MAILCHIMP_AUDIENCE_ID`) for an email send, and empty when there is none (WhatsApp, or a dry-run without Mailchimp config). A send to a test audience therefore never marks the date as sent for the real audience, or the other way round. On an existing database, add the column with `db/migrations/002_send_log_audience.sql` (see the top of that file).
+
+A run must **claim** the row before sending:
 
 1. `INSERT` a `claimed` row. A duplicate key means another run already has it.
 2. Otherwise, if the row is `failed`, flip it to `claimed` (`UPDATE … WHERE status = 'failed'`; only one run can win, since `affectedRows` must be 1).

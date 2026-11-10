@@ -7,6 +7,7 @@ const { isValidGregorianDate } = require('./dailyContentService');
  * @property {string} program
  * @property {'email'|'whatsapp'} channel
  * @property {'dry-run'|'live'} mode
+ * @property {string} audience Mailchimp audience ID for an email send; '' when none.
  * @property {'claimed'|'sent'|'failed'} status `claimed` = in progress, or interrupted mid-send.
  * @property {number} attempts
  * @property {string|null} providerMessageId
@@ -19,6 +20,7 @@ const toEntry = (row) => ({
   program: row.program,
   channel: row.channel,
   mode: row.mode,
+  audience: row.audience,
   status: row.status,
   attempts: row.attempts,
   providerMessageId: row.provider_message_id,
@@ -27,7 +29,7 @@ const toEntry = (row) => ({
 });
 
 /**
- * Read-only view of send_log for one date: one entry per program/channel/mode,
+ * Read-only view of send_log for one date: one entry per program/channel/mode/audience,
  * oldest first. A date with no attempts returns an empty list.
  *
  * @param {{ date: string }} options
