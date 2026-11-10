@@ -58,7 +58,7 @@ Builds everything and sends nothing: it writes `outbox/2026-10-19/email-time4mis
 npm run send:daily -- --dry-run=false        # needs SEND_MODE=live
 ```
 
-Schedule it with cron at 04:30 Europe/London every day (see [docs/SENDING.md](docs/SENDING.md#cron-0430-london-for-the-0515-send)). Each date is sent at most once (`send_log`). Failures show in the job output and exit code; there is no separate alert yet.
+The app runs it itself once hosted: set `SCHEDULER_ENABLED=true` (and `SEND_MODE=live`) and `npm start` runs the email and Castos jobs every evening and morning (see [docs/SENDING.md](docs/SENDING.md#in-app-scheduler)). A system cron line is still an option. Each date is sent at most once (`send_log`). Failures show in the job output and exit code; there is no separate alert yet.
 
 ### Tests
 

@@ -51,11 +51,11 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 On a Friday whose Time4Mishna row is a chazara, the Time4Mishna email is the chazara email instead of the daily one (`src/services/render/chazaraEmail.js`, `src/services/chazaraService.js`). It is email-only: no Castos episode, and WhatsApp keeps the plain "Chazara" message. Yom Tov Fridays send nothing, as on any Yom Tov.
 
 - **Range and perakim** come from `additional_notice`, written by `db/createSchedule/chazaraSchedule.js`: the Friday row holds the week's range (`Shabbos 18.3-22.5`, `Shabbos 22.6 - Eiruvin 1.9`) and the next day's Shabbos row holds the perakim (`Shabbos 5-6`, `Bikkurim 4`, `Orlah 3 - Bikkurim 1`). Text in any other form fails the email rather than guessing.
-- **Files** are in `<BUCKET_PATH>/mishna/chazara/`, named lower-case with spaces as `_` and ` - ` as `-`: `shabbos_22.6-eiruvin_1.9_text.pdf`, `shabbos_22.6-eiruvin_1.9_summary.pdf`, `shabbos_7-8.pdf`.
-- **The week's TEXT PDF must exist** (HEAD returns 2xx). If it's missing, the Time4Mishna email fails with `Render failed: Chazara TEXT PDF not found in the bucket: …`; nothing is claimed in `send_log`, so the next run retries.
-- **Summaries are optional**, since many aren't written yet. Without the week's SUMMARY the email links only the TEXT ("Please find attached the Text for this week's mishnayos:"). Without the Shabbos perakim PDF the Shabbos section and the `| <perakim>` part of the subject are left out.
+- **Files** are in `<BUCKET_PATH>/mishna/chazara/`, named lower-case with spaces as `_` and ` - ` as `-`. The week is one PDF named after the range with no suffix (`shabbos_22.6-eiruvin_1.9.pdf`, e.g. `prod_time4mishna/mishna/chazara/shabbos_18.3-22.5.pdf`); the Shabbos perakim summary is `shabbos_7-8.pdf`.
+- **The week's PDF must exist** (HEAD returns 2xx). If it's missing, the Time4Mishna email fails with `Render failed: Chazara TEXT PDF not found in the bucket: …`; nothing is claimed in `send_log`, so the next run retries.
+- **The perakim summary is optional**, since many aren't written yet. Without the Shabbos perakim PDF the Shabbos section and the `| <perakim>` part of the subject are left out.
 - **Subject** `Chazara: Shabbos 22.6 - Eiruvin 1.9 | Shabbos 7-8`, **preview text** `Shabbos 7-8`. With no perakim the `| …` part and the Shabbos section are left out (the preview text is then the range).
-- **Body** follows the manual send: "Please find attached the Text and Chazara Summaries for this week's mishnayos:" with TEXT and SUMMARY links, then "…for this Shabbos's mishnayos:" with `Shabbos Perakim 7-8`, inside the daily email's layout and footer (no calendar image).
+- **Body** follows the manual send: "Please find attached the Text for this week's mishnayos:" with one link to the week's PDF, then "…for this Shabbos's mishnayos:" with `Shabbos Perakim 7-8`, inside the daily email's layout and footer (no calendar image).
 - `special_date` and `additional_notice` are shown when present.
 
 ### Programs and channels
@@ -187,9 +187,24 @@ Dry-run and live are tracked separately, so a dry-run never blocks a live send. 
 
 The table is defined at the end of `db/setup.sql`. `setup.sql` drops and recreates the whole database, so on an existing database run only the `CREATE TABLE send_log …` statement (and drop any earlier `send_log` from before this change first).
 
-### Cron (04:30 London, for the 05:15 send)
+### In-app scheduler
 
-The job works out "today" in Europe/London itself and asks Mailchimp to send at `SEND_TIME` (05:15), so it runs a while before that to leave room for a retry. Use `CRON_TZ` where your cron supports it (cronie, most Linux distributions). It can run every day: Shabbos and Yom Tov are skipped by the job (exit 0).
+`npm start` also starts the scheduler (`src/services/scheduler`), so once the app is hosted the sends run without a system cron. It is **off unless `SCHEDULER_ENABLED=true`**, and `SEND_MODE` still decides live vs dry-run.
+
+| Run | When (default, `SEND_TIMEZONE`) | Does |
+| --- | --- | --- |
+| evening | `SCHEDULER_EVENING_TIME` 21:00 | Email for tomorrow (scheduled in Mailchimp for `SEND_TIME`), then Castos for tomorrow and the next `SCHEDULER_CASTOS_DAYS - 1` days (default 7 in all) |
+| morning | `SCHEDULER_MORNING_TIME` 04:30 | Email and Castos for today: a catch-up. Both skip what's already done (`send_log`, existing episode title), so after a good evening run it does nothing |
+
+- **Safeguards:** a config problem logs `[scheduler] NOT STARTED: …` and the API keeps running; runs use their own write DB pool (`runWithDatabaseRole`) while the API stays on the read-only one, and never close a pool; every error is caught and logged; only one run at a time.
+- **Castos** needs `CASTOS_API_KEY` and `CASTOS_PODCAST_ID`; live also needs `CASTOS_LIVE_PODCAST_ID`. Dry-run uses the test show. `SCHEDULER_CASTOS=false` turns Castos off.
+- **Hosting:** the app must stay awake at the run times (no sleeping free tier) and only **one** copy may have `SCHEDULER_ENABLED=true`. Email is protected against two copies by `send_log`; Castos is not (its check-then-create can race).
+- **Logs:** each run logs `[scheduler] <run> run started` and `… finished ok` or `… finished with N failure(s): …`. There is no alert yet: watch for those lines.
+- **Trying it by hand:** `npm run scheduler:run -- --run=evening` (or `morning`) runs exactly what the scheduler would, then exits (0 ok, 1 failures, 2 config error). With `SEND_MODE=dry-run` it only writes previews.
+
+### Cron (alternative to the in-app scheduler)
+
+If the app isn't always running, use a system cron instead (and leave `SCHEDULER_ENABLED` off). The job works out "today" in Europe/London itself and asks Mailchimp to send at `SEND_TIME` (05:15), so it runs a while before that to leave room for a retry. Use `CRON_TZ` where your cron supports it (cronie, most Linux distributions). It can run every day: Shabbos and Yom Tov are skipped by the job (exit 0).
 
 ```cron
 CRON_TZ=Europe/London

@@ -161,6 +161,37 @@ describe('pool and role', () => {
   });
 });
 
+describe('runWithDatabaseRole', () => {
+  test('uses the write pool inside, and the read pool outside, in a read-role process', async () => {
+    const readPool = { query: jest.fn().mockResolvedValue([[]]), end: jest.fn() };
+    const writePool = { query: jest.fn().mockResolvedValue([[]]), end: jest.fn() };
+    mockCreatePool.mockImplementation((settings) => (settings.user === 'app_read' ? readPool : writePool));
+    const env = loadEnv({ ...WRITE_ENV, DATABASE_READ_USER: 'app_read', DATABASE_READ_PASSWORD: 'read-pass' });
+    env.useDatabaseRole('read');
+
+    await env.query('SELECT 1', []);
+    await env.runWithDatabaseRole('write', async () => {
+      expect(env.getDatabaseRole()).toBe('write');
+      await Promise.resolve();
+      await env.query('INSERT 1', []);
+    });
+    await env.query('SELECT 2', []);
+
+    expect(readPool.query.mock.calls.map(([sql]) => sql)).toEqual(['SELECT 1', 'SELECT 2']);
+    expect(writePool.query.mock.calls.map(([sql]) => sql)).toEqual(['INSERT 1']);
+    expect(env.getDatabaseRole()).toBe('read');
+
+    await env.closePool();
+    expect(readPool.end).toHaveBeenCalledTimes(1);
+    expect(writePool.end).toHaveBeenCalledTimes(1);
+  });
+
+  test('rejects an unknown role', () => {
+    const env = loadEnv(WRITE_ENV);
+    expect(() => env.runWithDatabaseRole('admin', () => {})).toThrow('Unknown database role "admin"');
+  });
+});
+
 describe('src/server.js', () => {
   test('sets the read role before loading the app', () => {
     const order = [];
