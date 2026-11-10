@@ -751,8 +751,7 @@ describe('runDailySend live email config', () => {
       range: 'Shabbos 22.6 - Eiruvin 1.9',
       perakim: 'Shabbos 7-8',
       links: {
-        text: 'https://bucket.test/mishna/chazara/shabbos_22.6-eiruvin_1.9_text.pdf',
-        summary: 'https://bucket.test/mishna/chazara/shabbos_22.6-eiruvin_1.9_summary.pdf',
+        text: 'https://bucket.test/mishna/chazara/shabbos_22.6-eiruvin_1.9.pdf',
         perakim: 'https://bucket.test/mishna/chazara/shabbos_7-8.pdf',
       },
     };

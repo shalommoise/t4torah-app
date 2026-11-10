@@ -51,11 +51,11 @@ jobs/dailySend.js                  CLI: flags, config, exit code, closes DB pool
 On a Friday whose Time4Mishna row is a chazara, the Time4Mishna email is the chazara email instead of the daily one (`src/services/render/chazaraEmail.js`, `src/services/chazaraService.js`). It is email-only: no Castos episode, and WhatsApp keeps the plain "Chazara" message. Yom Tov Fridays send nothing, as on any Yom Tov.
 
 - **Range and perakim** come from `additional_notice`, written by `db/createSchedule/chazaraSchedule.js`: the Friday row holds the week's range (`Shabbos 18.3-22.5`, `Shabbos 22.6 - Eiruvin 1.9`) and the next day's Shabbos row holds the perakim (`Shabbos 5-6`, `Bikkurim 4`, `Orlah 3 - Bikkurim 1`). Text in any other form fails the email rather than guessing.
-- **Files** are in `<BUCKET_PATH>/mishna/chazara/`, named lower-case with spaces as `_` and ` - ` as `-`: `shabbos_22.6-eiruvin_1.9_text.pdf`, `shabbos_22.6-eiruvin_1.9_summary.pdf`, `shabbos_7-8.pdf`.
-- **The week's TEXT PDF must exist** (HEAD returns 2xx). If it's missing, the Time4Mishna email fails with `Render failed: Chazara TEXT PDF not found in the bucket: …`; nothing is claimed in `send_log`, so the next run retries.
-- **Summaries are optional**, since many aren't written yet. Without the week's SUMMARY the email links only the TEXT ("Please find attached the Text for this week's mishnayos:"). Without the Shabbos perakim PDF the Shabbos section and the `| <perakim>` part of the subject are left out.
+- **Files** are in `<BUCKET_PATH>/mishna/chazara/`, named lower-case with spaces as `_` and ` - ` as `-`. The week is one PDF named after the range with no suffix (`shabbos_22.6-eiruvin_1.9.pdf`, e.g. `prod_time4mishna/mishna/chazara/shabbos_18.3-22.5.pdf`); the Shabbos perakim summary is `shabbos_7-8.pdf`.
+- **The week's PDF must exist** (HEAD returns 2xx). If it's missing, the Time4Mishna email fails with `Render failed: Chazara TEXT PDF not found in the bucket: …`; nothing is claimed in `send_log`, so the next run retries.
+- **The perakim summary is optional**, since many aren't written yet. Without the Shabbos perakim PDF the Shabbos section and the `| <perakim>` part of the subject are left out.
 - **Subject** `Chazara: Shabbos 22.6 - Eiruvin 1.9 | Shabbos 7-8`, **preview text** `Shabbos 7-8`. With no perakim the `| …` part and the Shabbos section are left out (the preview text is then the range).
-- **Body** follows the manual send: "Please find attached the Text and Chazara Summaries for this week's mishnayos:" with TEXT and SUMMARY links, then "…for this Shabbos's mishnayos:" with `Shabbos Perakim 7-8`, inside the daily email's layout and footer (no calendar image).
+- **Body** follows the manual send: "Please find attached the Text for this week's mishnayos:" with one link to the week's PDF, then "…for this Shabbos's mishnayos:" with `Shabbos Perakim 7-8`, inside the daily email's layout and footer (no calendar image).
 - `special_date` and `additional_notice` are shown when present.
 
 ### Programs and channels
