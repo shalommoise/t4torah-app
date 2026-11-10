@@ -187,9 +187,24 @@ Dry-run and live are tracked separately, so a dry-run never blocks a live send. 
 
 The table is defined at the end of `db/setup.sql`. `setup.sql` drops and recreates the whole database, so on an existing database run only the `CREATE TABLE send_log …` statement (and drop any earlier `send_log` from before this change first).
 
-### Cron (04:30 London, for the 05:15 send)
+### In-app scheduler
 
-The job works out "today" in Europe/London itself and asks Mailchimp to send at `SEND_TIME` (05:15), so it runs a while before that to leave room for a retry. Use `CRON_TZ` where your cron supports it (cronie, most Linux distributions). It can run every day: Shabbos and Yom Tov are skipped by the job (exit 0).
+`npm start` also starts the scheduler (`src/services/scheduler`), so once the app is hosted the sends run without a system cron. It is **off unless `SCHEDULER_ENABLED=true`**, and `SEND_MODE` still decides live vs dry-run.
+
+| Run | When (default, `SEND_TIMEZONE`) | Does |
+| --- | --- | --- |
+| evening | `SCHEDULER_EVENING_TIME` 21:00 | Email for tomorrow (scheduled in Mailchimp for `SEND_TIME`), then Castos for tomorrow and the next `SCHEDULER_CASTOS_DAYS - 1` days (default 7 in all) |
+| morning | `SCHEDULER_MORNING_TIME` 04:30 | Email and Castos for today: a catch-up. Both skip what's already done (`send_log`, existing episode title), so after a good evening run it does nothing |
+
+- **Safeguards:** a config problem logs `[scheduler] NOT STARTED: …` and the API keeps running; runs use their own write DB pool (`runWithDatabaseRole`) while the API stays on the read-only one, and never close a pool; every error is caught and logged; only one run at a time.
+- **Castos** needs `CASTOS_API_KEY` and `CASTOS_PODCAST_ID`; live also needs `CASTOS_LIVE_PODCAST_ID`. Dry-run uses the test show. `SCHEDULER_CASTOS=false` turns Castos off.
+- **Hosting:** the app must stay awake at the run times (no sleeping free tier) and only **one** copy may have `SCHEDULER_ENABLED=true`. Email is protected against two copies by `send_log`; Castos is not (its check-then-create can race).
+- **Logs:** each run logs `[scheduler] <run> run started` and `… finished ok` or `… finished with N failure(s): …`. There is no alert yet: watch for those lines.
+- **Trying it by hand:** `npm run scheduler:run -- --run=evening` (or `morning`) runs exactly what the scheduler would, then exits (0 ok, 1 failures, 2 config error). With `SEND_MODE=dry-run` it only writes previews.
+
+### Cron (alternative to the in-app scheduler)
+
+If the app isn't always running, use a system cron instead (and leave `SCHEDULER_ENABLED` off). The job works out "today" in Europe/London itself and asks Mailchimp to send at `SEND_TIME` (05:15), so it runs a while before that to leave room for a retry. Use `CRON_TZ` where your cron supports it (cronie, most Linux distributions). It can run every day: Shabbos and Yom Tov are skipped by the job (exit 0).
 
 ```cron
 CRON_TZ=Europe/London
