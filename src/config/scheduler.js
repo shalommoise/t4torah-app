@@ -11,9 +11,12 @@ const DEFAULTS = {
   SCHEDULER_MORNING_TIME: '04:30',
   SCHEDULER_CASTOS: 'true',
   SCHEDULER_CASTOS_DAYS: '7',
+  // Like `castos:publish`, the test show unless the live show is asked for.
+  SCHEDULER_CASTOS_PODCAST: 'test',
   SEND_TIMEZONE: 'Europe/London',
 };
 
+const CASTOS_PODCASTS = ['test', 'live'];
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const MAX_CASTOS_DAYS = 30;
 
@@ -52,6 +55,7 @@ const timeToCron = (time) => {
  *   morningTime: string,
  *   castos: boolean,
  *   castosDays: number,
+ *   castosPodcast: 'test'|'live',
  *   timeZone: string,
  * }}
  */
@@ -83,6 +87,11 @@ const getSchedulerConfig = (env = process.env) => {
     problems.push(`SCHEDULER_CASTOS_DAYS must be a whole number from 1 to ${MAX_CASTOS_DAYS} (got "${daysValue}")`);
   }
 
+  const castosPodcast = readValue(env, 'SCHEDULER_CASTOS_PODCAST');
+  if (!CASTOS_PODCASTS.includes(castosPodcast)) {
+    problems.push(`SCHEDULER_CASTOS_PODCAST must be test or live (got "${castosPodcast}")`);
+  }
+
   const timeZone = readValue(env, 'SEND_TIMEZONE');
   if (!isValidTimeZone(timeZone)) {
     problems.push(`SEND_TIMEZONE must be an IANA time zone, e.g. Europe/London (got "${timeZone}")`);
@@ -91,7 +100,7 @@ const getSchedulerConfig = (env = process.env) => {
   if (problems.length) {
     throw new Error(`Invalid scheduler config: ${problems.join('; ')}`);
   }
-  return { enabled, eveningTime, morningTime, castos, castosDays, timeZone };
+  return { enabled, eveningTime, morningTime, castos, castosDays, castosPodcast, timeZone };
 };
 
 module.exports = { DEFAULTS, MAX_CASTOS_DAYS, getSchedulerConfig, timeToCron };

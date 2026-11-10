@@ -22,6 +22,7 @@ const errorMessage = (error) => (error && error.message) || String(error);
  * @param {{ castos: boolean, castosDays: number }} deps.schedulerConfig
  * @param {object|null} deps.castos getCastosConfig() output (null when Castos is off)
  * @param {string|null} deps.podcastId
+ * @param {'test'|'live'} [deps.podcast] Which show podcastId is, for the logs.
  * @param {Function} deps.runDailySend
  * @param {Function} deps.formatSendReport jobs/dailySend formatReport
  * @param {Function} deps.getDailyContent
@@ -36,6 +37,7 @@ const errorMessage = (error) => (error && error.message) || String(error);
  */
 const createScheduledTasks = (deps) => {
   const { live, sendConfig, mailchimp, emailConfig, schedulerConfig, castos, podcastId, logger } = deps;
+  const podcast = deps.podcast || 'test';
   const now = deps.now || (() => new Date());
   const mode = live ? 'live' : 'dry-run';
 
@@ -72,7 +74,7 @@ const createScheduledTasks = (deps) => {
       dryRun: !live,
     });
     logger.log(
-      deps.formatCastosResult(result, { date, podcast: live ? 'live' : 'test', dryRun: !live, timeZone: castos.timeZone })
+      deps.formatCastosResult(result, { date, podcast, dryRun: !live, timeZone: castos.timeZone })
     );
   };
 
@@ -136,10 +138,10 @@ const buildScheduledTasks = (env, schedulerConfig, logger) => {
   let podcastId = null;
   if (schedulerConfig.castos) {
     castos = getCastosConfig(env);
-    if (live && !castos.livePodcastId) {
-      throw new Error('SEND_MODE=live with SCHEDULER_CASTOS=true needs CASTOS_LIVE_PODCAST_ID');
+    if (schedulerConfig.castosPodcast === 'live' && !castos.livePodcastId) {
+      throw new Error('SCHEDULER_CASTOS_PODCAST=live needs CASTOS_LIVE_PODCAST_ID');
     }
-    podcastId = live ? castos.livePodcastId : castos.testPodcastId;
+    podcastId = schedulerConfig.castosPodcast === 'live' ? castos.livePodcastId : castos.testPodcastId;
   }
 
   return createScheduledTasks({
@@ -150,6 +152,7 @@ const buildScheduledTasks = (env, schedulerConfig, logger) => {
     schedulerConfig,
     castos,
     podcastId,
+    podcast: schedulerConfig.castosPodcast,
     logger,
     runDailySend: require('../dailySendService').runDailySend,
     formatSendReport: require('../../../jobs/dailySend').formatReport,

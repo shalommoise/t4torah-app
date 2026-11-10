@@ -197,7 +197,8 @@ The table is defined at the end of `db/setup.sql`. `setup.sql` drops and recreat
 | morning | `SCHEDULER_MORNING_TIME` 04:30 | Email and Castos for today: a catch-up. Both skip what's already done (`send_log`, existing episode title), so after a good evening run it does nothing |
 
 - **Safeguards:** a config problem logs `[scheduler] NOT STARTED: …` and the API keeps running; runs use their own write DB pool (`runWithDatabaseRole`) while the API stays on the read-only one, and never close a pool; every error is caught and logged; only one run at a time.
-- **Castos** needs `CASTOS_API_KEY` and `CASTOS_PODCAST_ID`; live also needs `CASTOS_LIVE_PODCAST_ID`. Dry-run uses the test show. `SCHEDULER_CASTOS=false` turns Castos off.
+- **Castos** needs `CASTOS_API_KEY` and `CASTOS_PODCAST_ID`. It goes to the **test show** unless `SCHEDULER_CASTOS_PODCAST=live` (which needs `CASTOS_LIVE_PODCAST_ID`), even with `SEND_MODE=live`. `SCHEDULER_CASTOS=false` turns Castos off.
+- **Trial run against test targets:** `SEND_MODE=live`, `MAILCHIMP_AUDIENCE_ID=<test audience>`, `SCHEDULER_CASTOS_PODCAST=test`. Use a database that is **not** production: live runs record `sent` in `send_log`, and those rows would stop the real send for the same dates.
 - **Hosting:** the app must stay awake at the run times (no sleeping free tier) and only **one** copy may have `SCHEDULER_ENABLED=true`. Email is protected against two copies by `send_log`; Castos is not (its check-then-create can race).
 - **Logs:** each run logs `[scheduler] <run> run started` and `… finished ok` or `… finished with N failure(s): …`. There is no alert yet: watch for those lines.
 - **Trying it by hand:** `npm run scheduler:run -- --run=evening` (or `morning`) runs exactly what the scheduler would, then exits (0 ok, 1 failures, 2 config error). With `SEND_MODE=dry-run` it only writes previews.

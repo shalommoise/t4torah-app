@@ -104,14 +104,29 @@ describe('buildScheduledTasks', () => {
     CASTOS_API_KEY: 'key',
     CASTOS_PODCAST_ID: '1',
   };
-  const schedulerConfig = { castos: true, castosDays: 7 };
+  const schedulerConfig = { castos: true, castosDays: 7, castosPodcast: 'live' };
   const logger = { log: jest.fn(), error: jest.fn() };
 
   test('needs BUCKET_PATH', () => {
     expect(() => buildScheduledTasks({ ...LIVE_ENV, BUCKET_PATH: '' }, schedulerConfig, logger)).toThrow('BUCKET_PATH');
   });
 
-  test('live Castos needs the live show', () => {
+  test('live sends can go to the Castos test show and a test audience', async () => {
+    const tasks = buildScheduledTasks(
+      {
+        ...LIVE_ENV,
+        MAILCHIMP_API_KEY: 'abc-us1',
+        MAILCHIMP_AUDIENCE_ID: 'test-audience',
+        MAILCHIMP_FROM_NAME: 'Time4Mishna',
+        MAILCHIMP_REPLY_TO: 'a@b.test',
+      },
+      { ...schedulerConfig, castosPodcast: 'test' },
+      logger
+    );
+    expect(tasks).toEqual({ evening: expect.any(Function), morning: expect.any(Function) });
+  });
+
+  test('the live Castos show needs CASTOS_LIVE_PODCAST_ID', () => {
     expect(() =>
       buildScheduledTasks({ ...LIVE_ENV, SEND_CHANNELS: 'whatsapp' }, schedulerConfig, logger)
     ).toThrow('CASTOS_LIVE_PODCAST_ID');

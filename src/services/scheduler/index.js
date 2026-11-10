@@ -82,7 +82,7 @@ const startScheduler = ({
   ];
   logger.log(
     `[scheduler] on: evening run ${config.eveningTime}, morning run ${config.morningTime} (${config.timeZone})` +
-      `${config.castos ? `, Castos ${config.castosDays} day(s) ahead` : ', Castos off'}`
+      `${config.castos ? `, Castos ${config.castosPodcast} show ${config.castosDays} day(s) ahead` : ', Castos off'}`
   );
 
   return {

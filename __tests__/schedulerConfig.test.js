@@ -8,6 +8,7 @@ describe('getSchedulerConfig', () => {
       morningTime: '04:30',
       castos: true,
       castosDays: 7,
+      castosPodcast: 'test',
       timeZone: 'Europe/London',
     });
   });
@@ -20,6 +21,7 @@ describe('getSchedulerConfig', () => {
         SCHEDULER_MORNING_TIME: '04:00',
         SCHEDULER_CASTOS: 'false',
         SCHEDULER_CASTOS_DAYS: '3',
+        SCHEDULER_CASTOS_PODCAST: 'live',
         SEND_TIMEZONE: 'Europe/London',
       })
     ).toEqual({
@@ -28,6 +30,7 @@ describe('getSchedulerConfig', () => {
       morningTime: '04:00',
       castos: false,
       castosDays: 3,
+      castosPodcast: 'live',
       timeZone: 'Europe/London',
     });
   });
@@ -43,6 +46,10 @@ describe('getSchedulerConfig', () => {
     ).toThrow(
       /SCHEDULER_ENABLED must be true or false.*SCHEDULER_MORNING_TIME must be HH:MM.*SCHEDULER_CASTOS_DAYS must be a whole number.*SEND_TIMEZONE/
     );
+  });
+
+  test('rejects an unknown Castos show', () => {
+    expect(() => getSchedulerConfig({ SCHEDULER_CASTOS_PODCAST: 'prod' })).toThrow('SCHEDULER_CASTOS_PODCAST must be test or live');
   });
 
   test('caps Castos days at 30', () => {
