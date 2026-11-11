@@ -9,8 +9,9 @@ const errorMessage = (error) => (error && error.message) || String(error);
  *
  * Safeguards:
  * - off unless SCHEDULER_ENABLED=true; SEND_MODE still decides live vs dry-run;
- * - a config problem logs "not started" and returns `null` instead of
- *   throwing, so the API keeps serving;
+ * - a config problem, or a module that fails to load (e.g. node-cron not
+ *   installed), logs "not started" and returns `null` instead of throwing, so
+ *   the API keeps serving;
  * - every run uses the write DB pool (runWithDatabaseRole), leaving the API on
  *   the read-only pool, and never closes a pool;
  * - one run at a time: a run that starts while another is going is skipped;
@@ -26,13 +27,7 @@ const errorMessage = (error) => (error && error.message) || String(error);
  * @param {Function} [options.runWithRole] config/env runWithDatabaseRole, for tests
  * @returns {{ stop: () => void, runNow: (name: 'evening'|'morning') => Promise<object|null> } | null}
  */
-const startScheduler = ({
-  env = process.env,
-  logger = console,
-  cron = require('node-cron'),
-  buildTasks = require('./tasks').buildScheduledTasks,
-  runWithRole = require('../../config/env').runWithDatabaseRole,
-} = {}) => {
+const startScheduler = ({ env = process.env, logger = console, cron, buildTasks, runWithRole } = {}) => {
   let config;
   let tasks;
   try {
@@ -41,6 +36,11 @@ const startScheduler = ({
       logger.log('[scheduler] off (set SCHEDULER_ENABLED=true to run the daily sends from this app)');
       return null;
     }
+    // Loaded here, not as parameter defaults, so a missing or broken module
+    // logs NOT STARTED instead of crashing the API.
+    cron = cron || require('node-cron');
+    buildTasks = buildTasks || require('./tasks').buildScheduledTasks;
+    runWithRole = runWithRole || require('../../config/env').runWithDatabaseRole;
     tasks = buildTasks(env, config, logger);
   } catch (error) {
     logger.error(`[scheduler] NOT STARTED: ${errorMessage(error)}`);

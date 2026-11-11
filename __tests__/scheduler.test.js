@@ -42,6 +42,32 @@ describe('startScheduler', () => {
     expect(log.error).toHaveBeenCalledWith('[scheduler] NOT STARTED: BUCKET_PATH is required');
   });
 
+  test('a node-cron that fails to load logs NOT STARTED instead of throwing', () => {
+    const log = logger();
+    jest.isolateModules(() => {
+      jest.doMock('node-cron', () => {
+        throw new Error("Cannot find module 'node-cron'");
+      });
+      const { startScheduler: start } = require('../src/services/scheduler');
+
+      expect(start({ env: ENABLED, buildTasks: jest.fn(), logger: log, runWithRole })).toBeNull();
+    });
+    jest.dontMock('node-cron');
+    expect(log.error).toHaveBeenCalledWith("[scheduler] NOT STARTED: Cannot find module 'node-cron'");
+  });
+
+  test('does not load node-cron when the scheduler is off', () => {
+    jest.isolateModules(() => {
+      jest.doMock('node-cron', () => {
+        throw new Error('should not be loaded');
+      });
+      const { startScheduler: start } = require('../src/services/scheduler');
+
+      expect(start({ env: {}, logger: logger() })).toBeNull();
+    });
+    jest.dontMock('node-cron');
+  });
+
   test('schedules the evening and morning runs in Europe/London', () => {
     const cron = fakeCron();
     const tasks = { evening: jest.fn(), morning: jest.fn() };
