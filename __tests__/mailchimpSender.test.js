@@ -91,7 +91,7 @@ describe('createMailchimpSender', () => {
 
   describe('fails before touching Mailchimp', () => {
     test.each([
-      ['a non-Mailchimp program', message({ program: 'time4nach' }), 'Mailchimp sends only time4mishna'],
+      ['a non-Mailchimp program', message({ program: 'time4nach' }), 'Mailchimp sends only time4mishna, time4tefilla'],
       [
         'an email without the unsubscribe tag',
         message({ email: { subject: 's', html: '<p>x</p>', text: 'x' } }),
@@ -246,7 +246,7 @@ describe('createMailchimpPreviewSender', () => {
   test('fails like the live sender would on a content problem', async () => {
     await expect(preview().send(message({ program: 'time4nach' }))).resolves.toEqual({
       ok: false,
-      error: 'Mailchimp sends only time4mishna (got time4nach)',
+      error: 'Mailchimp sends only time4mishna, time4tefilla (got time4nach)',
     });
     expect(fs.readdirSync(outboxDir)).toEqual([]);
   });

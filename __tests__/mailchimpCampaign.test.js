@@ -26,7 +26,7 @@ describe('getCampaignProblem', () => {
   });
 
   test.each(['time4nach', 'combined'])('refuses %s (only Time4Mishna goes to the audience)', (program) => {
-    expect(getCampaignProblem(message({ program }))).toBe(`Mailchimp sends only time4mishna (got ${program})`);
+    expect(getCampaignProblem(message({ program }))).toBe(`Mailchimp sends only time4mishna, time4tefilla (got ${program})`);
   });
 
   test('refuses an email without the unsubscribe merge tag', () => {
