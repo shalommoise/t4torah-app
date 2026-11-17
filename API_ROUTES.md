@@ -2,9 +2,9 @@
 
 Base prefix: `/api/v1`
 
-Calendar and static asset routes are served outside `/api/v1`.
+Calendar, static asset and admin routes are served outside `/api/v1`.
 
-All routes are `GET` only.
+All routes are `GET` only, except the Time4Tefilla upload (`POST /admin/time4tefilla/uploads`).
 
 Every route is rate limited per client: 300 requests per 15 minutes by default, and 30 for `/calendar` and `/calendar/export`. Over the limit the response is `429` with `{ "error": "Too many requests, try again later" }`; `RateLimit` headers show the remaining budget. Limits are set in `.env` (`RATE_LIMIT_*`, `TRUST_PROXY`).
 
@@ -32,6 +32,26 @@ Every route is rate limited per client: 300 requests per 15 minutes by default, 
     - `curl -OJ -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/calendar/export?month=4&year=2026&format=pdf"`
     - `curl -OJ -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/calendar/export?month=4&year=2026&format=png"`
     - `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" "http://localhost:3000/calendar/export?month=4&year=2026&format=all"`
+
+## Time4Tefilla upload (admin only)
+
+Every route below needs `SENDS_ADMIN_TOKEN`: as `Authorization: Bearer $SENDS_ADMIN_TOKEN` (curl), or as the password of the browser's sign-in prompt (HTTP Basic, any user name). 401 without it, 503 when the variable is unset. Uploads also need ffmpeg on the server. How to use the page: [README](README.md#time4tefilla-upload).
+
+- `GET /admin/time4tefilla`
+  - The upload page. Open it in a browser; it asks for the token once.
+
+- `GET /admin/time4tefilla/status`
+  - `{ modes, configError, ffmpeg }`: the modes this server allows (`TEFILLA_SEND_MODE` and safer ones), any problem with that variable, and whether ffmpeg runs.
+  - Example: `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" http://localhost:3000/admin/time4tefilla/status`
+
+- `POST /admin/time4tefilla/uploads`
+  - `multipart/form-data`: `audio` (OGG/Opus voice note, M4A or MP3; up to 50 MB), `title` (the shiur title, also the email subject), `mode` (`dry-run` (default), `test` or `live`).
+  - Converts to a mono 64 kbps MP3 with ffmpeg, then:
+    - `dry-run`: writes the MP3, the email HTML and a JSON of the planned requests to `OUTBOX_DIR/<date>/time4tefilla-<title>.*`; creates nothing and doesn't touch `send_log`.
+    - `test` / `live`: creates (or reuses, by title) the Castos episode on the test show / Time4Tefilla show, checks its MP3 URL returns 200, then creates the Mailchimp campaign for the test audience / Time4Tefilla audience. Before 05:15 Europe/London (`SEND_TIME`, `CASTOS_PUBLISH_TIME`) both are scheduled for 05:15; after it, both go out at once.
+  - `200` → `{ ok: true, status: "dry-run" | "scheduled" | "sent", mode, title, shiurKey, date, plan, audio, … }`; test and live add `campaignId`, `audience` and `castos { podcastId, episodeId, reused, audioUrl }`.
+  - Errors → `{ ok: false, error, stage? }`: `400` bad upload or missing title, `403` mode above `TEFILLA_SEND_MODE`, `409` the shiur already went out (or an earlier attempt stopped part-way; see `send_log`), `413` file too large, `502` Castos/Mailchimp/audio check failed, `503` config problem or ffmpeg missing. Provider errors are shown in full here (they never contain API keys) so the uploader can see what failed.
+  - Example: `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" -F audio=@shiur.ogg --form-string "title=877. Which ‘Good Years’ Do We Refer To?" -F mode=dry-run http://localhost:3000/admin/time4tefilla/uploads`
 
 ## Static Assets
 
@@ -116,7 +136,7 @@ Every route is rate limited per client: 300 requests per 15 minutes by default, 
 
 ## Sends
 
-There are no send routes on the API server. Previews and the send log are operator commands run where the jobs run, so the public process never loads the send, Mailchimp or Castos code:
+There are no daily-send routes on the API server. Previews and the send log are operator commands run where the jobs run, so loading the public app never loads the send, Mailchimp or Castos code (the admin-only Time4Tefilla upload above loads it per request):
 
 - `npm run sends:preview -- --date=2026-09-28 [--program=time4nach] [--channel=whatsapp] [--html=preview.html]`
 - `npm run sends:log -- --date=2026-09-28`

@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const routes = require('./routes');
 const { createCalendarRouter } = require('./routes/calendarRouter');
+const { createTefillaAdminRouter } = require('./routes/tefillaAdminRouter');
 const { notFound, errorHandler } = require('./middleware/error');
 const { serveStaticAllowlist } = require('./middleware/staticAllowlist');
 const { securityHeaders, createRateLimiter } = require('./middleware/security');
@@ -28,6 +29,8 @@ app.use(
     limiter: createRateLimiter({ windowMs: httpConfig.windowMs, limit: httpConfig.calendarMax }),
   })
 );
+// Time4Tefilla upload page and endpoint (admin token required).
+app.use('/admin/time4tefilla', createTefillaAdminRouter());
 app.use('/api/v1', routes);
 app.use(notFound);
 app.use(errorHandler);

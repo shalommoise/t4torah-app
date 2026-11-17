@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time4Tefilla upload</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1d1d1f; --muted: #5f6368; --bg: #fafafa; --card: #fff; --line: #d9d9de; --accent: #007c89; --bad: #b3261e; --warn: #8a5a00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #e8e8ea; --muted: #a0a3a8; --bg: #161618; --card: #202023; --line: #3a3a3f; --accent: #4fb6c0; --bad: #f2b8b5; --warn: #f0c36a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  form { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; }
+  label { font-weight: 600; display: block; margin-bottom: 6px; }
+  input[type=text], input[type=file] { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  legend { font-weight: 600; margin-bottom: 6px; }
+  .modes label { font-weight: 400; display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }
+  .modes small, .hint { color: var(--muted); }
+  button { font: inherit; font-weight: 600; padding: 10px 16px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; justify-self: start; }
+  button:disabled { opacity: .6; cursor: progress; }
+  .notice { padding: 10px 12px; border-radius: 6px; border: 1px solid var(--line); margin: 0 0 16px; }
+  .notice.bad { color: var(--bad); border-color: currentColor; }
+  .notice.warn { color: var(--warn); border-color: currentColor; }
+  #result { margin-top: 20px; }
+  #result h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  #result.bad h2 { color: var(--bad); }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Time4Tefilla upload</h1>
+  <p class="lead">Upload the rabbi's audio and type the shiur title. The app converts it to MP3, creates the Castos episode and sends the Mailchimp campaign.</p>
+  <div id="status" class="notice" hidden></div>
+  <form id="upload">
+    <div>
+      <label for="audio">Audio file</label>
+      <input id="audio" name="audio" type="file" required accept=".ogg,.opus,.m4a,.mp3,audio/ogg,audio/opus,audio/mp4,audio/x-m4a,audio/mpeg">
+      <div class="hint">WhatsApp voice note (OGG/Opus), M4A or MP3.</div>
+    </div>
+    <div>
+      <label for="title">Shiur title</label>
+      <input id="title" name="title" type="text" required autocomplete="off" placeholder="877. Which ‘Good Years’ Do We Refer To?">
+      <div class="hint">Also the email subject and the episode title.</div>
+    </div>
+    <fieldset class="modes">
+      <legend>Mode</legend>
+      <label><input type="radio" name="mode" value="dry-run" checked> Dry run <small>converts and renders to the outbox folder; creates nothing</small></label>
+      <label><input type="radio" name="mode" value="test"> Test <small>Castos test show and the Mailchimp test audience</small></label>
+      <label><input type="radio" name="mode" value="live"> Live <small>Time4Tefilla show and audience</small></label>
+    </fieldset>
+    <div class="hint">Before 05:15 (London) the episode and email are scheduled for 05:15; after it they go out straight away.</div>
+    <button id="submit" type="submit">Upload</button>
+  </form>
+  <section id="result" hidden aria-live="polite">
+    <h2 id="result-title"></h2>
+    <pre id="result-body"></pre>
+  </section>
+</main>
+<script src="/admin/time4tefilla/upload.js"></script>
+</body>
+</html>
