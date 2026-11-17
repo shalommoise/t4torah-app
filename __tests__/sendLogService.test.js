@@ -38,6 +38,7 @@ describe('getSendLog', () => {
           channel: 'whatsapp',
           mode: 'live',
           audience: '',
+          shiurKey: '',
           status: 'failed',
           providerMessageId: null,
           createdAt,

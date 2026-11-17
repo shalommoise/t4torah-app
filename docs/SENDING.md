@@ -164,7 +164,7 @@ A date missing from `dates_table` is a failure on purpose: it means the calendar
 
 ### Idempotency (`send_log`)
 
-`send_log` has one row per date/program/channel/mode/audience (unique key), with `status` `claimed`, `sent` or `failed`, plus `attempts`. `audience` is the Mailchimp audience ID (`MAILCHIMP_AUDIENCE_ID`) for an email send, and empty when there is none (WhatsApp, or a dry-run without Mailchimp config). A send to a test audience therefore never marks the date as sent for the real audience, or the other way round. On an existing database, add the column with `db/migrations/002_send_log_audience.sql` (see the top of that file).
+`send_log` has one row per date/program/channel/mode/audience (unique key), with `status` `claimed`, `sent` or `failed`, plus `attempts`. `audience` is the Mailchimp audience ID (`MAILCHIMP_AUDIENCE_ID`) for an email send, and empty when there is none (WhatsApp, or a dry-run without Mailchimp config). A send to a test audience therefore never marks the date as sent for the real audience, or the other way round. On an existing database, add the column with `db/migrations/002_send_log_audience.sql` (see the top of that file). Time4Tefilla rows (program `time4tefilla`, from the [upload page](../README.md#time4tefilla-upload)) also carry `shiur_key`, the shiur's number, and a second unique key on it stops the same shiur going out twice on any date; add both with `db/migrations/003_send_log_time4tefilla.sql`.
 
 A run must **claim** the row before sending:
 

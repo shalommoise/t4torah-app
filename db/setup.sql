@@ -122,20 +122,27 @@ CREATE TABLE time4nach_daily_schedule (
 -- row: INSERT a 'claimed' row (duplicate key = already claimed), or flip a
 -- 'failed' row back to 'claimed'; then it sets 'sent' or 'failed'. A row left
 -- 'claimed' (crash mid-send) is never resent automatically.
+-- shiur_key identifies a Time4Tefilla shiur ('' for the daily programs);
+-- send_log_shiur_once stops the same shiur going out twice on any date. See
+-- db/migrations/003_send_log_time4tefilla.sql.
 CREATE TABLE send_log (
   send_log_id INT NOT NULL AUTO_INCREMENT,
   send_date VARCHAR(12) NOT NULL,
-  program ENUM('time4mishna', 'time4nach', 'combined') NOT NULL,
+  program ENUM('time4mishna', 'time4nach', 'combined', 'time4tefilla') NOT NULL,
   channel ENUM('email', 'whatsapp') NOT NULL,
   mode ENUM('dry-run', 'live') NOT NULL,
   audience VARCHAR(64) NOT NULL DEFAULT '',
+  shiur_key VARCHAR(191) NOT NULL DEFAULT '',
+  -- NULL for the daily programs, so only Time4Tefilla rows meet in send_log_shiur_once.
+  shiur_key_unique VARCHAR(191) AS (NULLIF(shiur_key, '')) STORED,
   status ENUM('claimed', 'sent', 'failed') NOT NULL,
   attempts INT NOT NULL DEFAULT 1,
   provider_message_id VARCHAR(255),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (send_log_id),
-  UNIQUE KEY send_log_once (send_date, program, channel, mode, audience)
+  UNIQUE KEY send_log_once (send_date, program, channel, mode, audience, shiur_key),
+  UNIQUE KEY send_log_shiur_once (program, channel, mode, audience, shiur_key_unique)
 );
 
 -- Summary sheets (feature/summary-sheets); see db/migrations/001_summary_sheets.sql.

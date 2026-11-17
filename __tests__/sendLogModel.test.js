@@ -130,3 +130,73 @@ describe('selectSendLogByDate', () => {
     expect(params).toEqual(['2026-09-28']);
   });
 });
+
+describe('Time4Tefilla rows, keyed by shiur', () => {
+  const {
+    claimShiurSendLog,
+    reclaimFailedShiurSendLog,
+    finishShiurSendLog,
+    selectShiurSendLog,
+  } = require('../src/models/sendLogModel');
+
+  const shiurKey = {
+    date: '2026-11-17',
+    program: 'time4tefilla',
+    channel: 'email',
+    mode: 'live',
+    audience: 'tefilla-list',
+    shiurKey: '877',
+  };
+  const shiurParams = ['time4tefilla', 'email', 'live', 'tefilla-list', '877'];
+  const SHIUR_WHERE = /WHERE program = \? AND channel = \? AND mode = \? AND audience = \? AND shiur_key = \?/;
+
+  test('claimShiurSendLog inserts a claimed row with the shiur key', async () => {
+    query.mockResolvedValue([{}]);
+    await expect(claimShiurSendLog(shiurKey)).resolves.toBe(true);
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toMatch(/INSERT INTO send_log \(send_date, program, channel, mode, audience, shiur_key, status, attempts\)\s+VALUES \(\?, \?, \?, \?, \?, \?, 'claimed', 1\)/);
+    expect(params).toEqual(['2026-11-17', ...shiurParams]);
+  });
+
+  test('claimShiurSendLog returns false when the shiur already has a row', async () => {
+    query.mockRejectedValue(Object.assign(new Error('dup'), { code: 'ER_DUP_ENTRY' }));
+    await expect(claimShiurSendLog(shiurKey)).resolves.toBe(false);
+  });
+
+  test('claimShiurSendLog rethrows other errors', async () => {
+    query.mockRejectedValue(new Error('db down'));
+    await expect(claimShiurSendLog(shiurKey)).rejects.toThrow('db down');
+  });
+
+  test('reclaimFailedShiurSendLog flips only a failed row, moving it to the new date', async () => {
+    query.mockResolvedValue([{ affectedRows: 1 }]);
+    await expect(reclaimFailedShiurSendLog(shiurKey)).resolves.toBe(true);
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toMatch(/SET status = 'claimed', attempts = attempts \+ 1, provider_message_id = NULL, send_date = \?/);
+    expect(sql).toMatch(SHIUR_WHERE);
+    expect(sql).toMatch(/AND status = 'failed'/);
+    expect(params).toEqual(['2026-11-17', ...shiurParams]);
+  });
+
+  test('finishShiurSendLog updates only a claimed row', async () => {
+    query.mockResolvedValue([{ affectedRows: 0 }]);
+    await expect(finishShiurSendLog(shiurKey, { status: 'sent', providerMessageId: 'mailchimp:c1' })).resolves.toBe(false);
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toMatch(SHIUR_WHERE);
+    expect(sql).toMatch(/AND status = 'claimed'/);
+    expect(params).toEqual(['sent', 'mailchimp:c1', ...shiurParams]);
+  });
+
+  test('selectShiurSendLog finds the row on any date', async () => {
+    query.mockResolvedValue([[{ status: 'sent' }]]);
+    await expect(selectShiurSendLog(shiurKey)).resolves.toEqual([{ status: 'sent' }]);
+    expect(query.mock.calls[0][0]).toMatch(SHIUR_WHERE);
+    expect(query.mock.calls[0][0]).not.toMatch(/send_date/);
+  });
+
+  test('refuses an empty shiur key, which would match every daily-program row', async () => {
+    await expect(claimShiurSendLog({ ...shiurKey, shiurKey: '' })).rejects.toThrow('non-empty shiurKey');
+    await expect(selectShiurSendLog({ ...shiurKey, shiurKey: '  ' })).rejects.toThrow('non-empty shiurKey');
+    expect(query).not.toHaveBeenCalled();
+  });
+});
