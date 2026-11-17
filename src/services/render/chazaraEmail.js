@@ -1,6 +1,6 @@
 const { renderEmailLayout, link } = require('./emailRenderer');
 
-// The Friday chazara email: the week's range (TEXT and SUMMARY PDFs) and the
+// The Friday chazara email: the week's range (one PDF) and the
 // Shabbos perakim summary, all in <bucket>/mishna/chazara/. The range and
 // perakim are the `additional_notice` of the Friday and Shabbos chazara rows,
 // written by db/createSchedule/chazaraSchedule.js.
@@ -63,9 +63,12 @@ const getChazaraParts = (fridayContent, shabbosContent) => {
 const chazaraFileName = (label) => tidy(label).replace(/ - /g, '-').replace(/ /g, '_').toLowerCase();
 
 /**
+ * The week's PDF is a single file named after the range, with no suffix:
+ * `<bucket>/mishna/chazara/shabbos_18.3-22.5.pdf`.
+ *
  * @param {{ range: string, perakim: string|null }} parts
  * @param {string} bucketUrl
- * @returns {{ text: string, summary: string, perakim: string|null }}
+ * @returns {{ text: string, perakim: string|null }}
  */
 const getChazaraLinks = ({ range, perakim }, bucketUrl) => {
   if (!bucketUrl) {
@@ -74,8 +77,7 @@ const getChazaraLinks = ({ range, perakim }, bucketUrl) => {
   const base = `${bucketUrl}/mishna/chazara`;
   const rangeName = encodeURI(chazaraFileName(range));
   return {
-    text: `${base}/${rangeName}_text.pdf`,
-    summary: `${base}/${rangeName}_summary.pdf`,
+    text: `${base}/${rangeName}.pdf`,
     perakim: perakim ? `${base}/${encodeURI(chazaraFileName(perakim))}.pdf` : null,
   };
 };
@@ -109,24 +111,18 @@ const PARAGRAPH = '<p style="margin:24px 0 0 0;">';
 /**
  * The chazara email (subject, preview text, HTML and plain text), with the
  * same layout and footer as the daily email and the wording of the manual
- * send. A `null` summary or perakim link is left out: without the week's
- * summary the intro mentions only the Text; without the perakim summary the
+ * send. A `null` perakim link is left out: without the perakim summary the
  * Shabbos section and the `| <perakim>` part of the subject are dropped.
  *
  * @param {{ date: object }} fridayContent
- * @param {{ range: string, perakim: string|null, links: { text: string, summary: string, perakim: string|null } }} chazara
+ * @param {{ range: string, perakim: string|null, links: { text: string, perakim: string|null } }} chazara
  * @param {{ assetsUrl?: string|null, unsubscribeUrl?: string|null }} [emailConfig]
  * @returns {{ subject: string, previewText: string, html: string, text: string }}
  */
 const renderChazaraEmail = (fridayContent, { range, perakim, links }, { assetsUrl = null, unsubscribeUrl = null } = {}) => {
-  const rangeLines = [
-    { label: `${range} TEXT`, url: links.text },
-    ...(links.summary ? [{ label: `${range} SUMMARY`, url: links.summary }] : []),
-  ];
+  const rangeLines = [{ label: `${range} TEXT`, url: links.text }];
   const perakimLine = perakim && links.perakim ? { label: perakimLabel(perakim), url: links.perakim } : null;
-  const weekIntro = links.summary
-    ? "Please find attached the Text and Chazara Summaries for this week's mishnayos:"
-    : "Please find attached the Text for this week's mishnayos:";
+  const weekIntro = "Please find attached the Text for this week's mishnayos:";
 
   const htmlParts = [
     `${PARAGRAPH}${weekIntro}</p>`,

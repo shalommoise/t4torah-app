@@ -91,10 +91,9 @@ describe('chazaraFileName', () => {
 });
 
 describe('getChazaraLinks', () => {
-  test('builds the text, summary and perakim URLs in mishna/chazara', () => {
+  test('builds the week (one file, no suffix) and perakim URLs in mishna/chazara', () => {
     expect(getChazaraLinks({ range: 'Shabbos 18.3-22.5', perakim: 'Shabbos 5-6' }, BUCKET)).toEqual({
-      text: `${BUCKET}/mishna/chazara/shabbos_18.3-22.5_text.pdf`,
-      summary: `${BUCKET}/mishna/chazara/shabbos_18.3-22.5_summary.pdf`,
+      text: `${BUCKET}/mishna/chazara/shabbos_18.3-22.5.pdf`,
       perakim: `${BUCKET}/mishna/chazara/shabbos_5-6.pdf`,
     });
   });
@@ -141,10 +140,10 @@ describe('renderChazaraEmail', () => {
 
     expect(email.subject).toBe('Chazara: Shabbos 18.3-22.5 | Shabbos 5-6');
     expect(email.previewText).toBe('Shabbos 5-6');
-    expect(email.html).toContain("Please find attached the Text and Chazara Summaries for this week's mishnayos:");
-    expect(email.html).toContain(`href="${BUCKET}/mishna/chazara/shabbos_18.3-22.5_text.pdf"`);
+    expect(email.html).toContain("Please find attached the Text for this week's mishnayos:");
+    expect(email.html).toContain(`href="${BUCKET}/mishna/chazara/shabbos_18.3-22.5.pdf"`);
     expect(email.html).toContain('>Shabbos 18.3-22.5 TEXT</a>');
-    expect(email.html).toContain('>Shabbos 18.3-22.5 SUMMARY</a>');
+    expect(email.html).not.toContain('SUMMARY');
     expect(email.html).toContain("Chazara Summaries for this Shabbos's mishnayos:");
     expect(email.html).toContain(`href="${BUCKET}/mishna/chazara/shabbos_5-6.pdf"`);
     expect(email.html).toContain('>Shabbos Perakim 5-6</a>');
@@ -152,7 +151,7 @@ describe('renderChazaraEmail', () => {
     expect(email.html).toContain('*|UNSUB|*');
     expect(email.html).not.toContain('{{');
 
-    expect(email.text).toContain(`Shabbos 18.3-22.5 TEXT (${BUCKET}/mishna/chazara/shabbos_18.3-22.5_text.pdf)`);
+    expect(email.text).toContain(`Shabbos 18.3-22.5 TEXT (${BUCKET}/mishna/chazara/shabbos_18.3-22.5.pdf)`);
     expect(email.text).toContain(`Shabbos Perakim 5-6 (${BUCKET}/mishna/chazara/shabbos_5-6.pdf)`);
     expect(email.text).toContain('Have a Good Shabbos!');
   });
@@ -165,18 +164,6 @@ describe('renderChazaraEmail', () => {
     expect(email.text).not.toContain('this Shabbos');
   });
 
-  test('links only the TEXT when the week has no summary', () => {
-    const { links, ...parts } = chazara();
-    const email = renderChazaraEmail(day('Shabbos 18.3-22.5'), { ...parts, links: { ...links, summary: null } });
-
-    expect(email.html).toContain("Please find attached the Text for this week's mishnayos:");
-    expect(email.html).toContain('>Shabbos 18.3-22.5 TEXT</a>');
-    expect(email.html).not.toContain('SUMMARY');
-    expect(email.text).not.toContain('SUMMARY');
-    expect(email.text).toContain("Please find attached the Text for this week's mishnayos:");
-    expect(email.subject).toBe('Chazara: Shabbos 18.3-22.5 | Shabbos 5-6');
-  });
-
   test('drops the Shabbos section and subject part when the perakim summary is missing', () => {
     const { links, ...parts } = chazara();
     const email = renderChazaraEmail(day('Shabbos 18.3-22.5'), { ...parts, links: { ...links, perakim: null } });
@@ -184,6 +171,6 @@ describe('renderChazaraEmail', () => {
     expect(email.subject).toBe('Chazara: Shabbos 18.3-22.5');
     expect(email.previewText).toBe('Shabbos 18.3-22.5');
     expect(email.html).not.toContain('this Shabbos');
-    expect(email.html).toContain('>Shabbos 18.3-22.5 SUMMARY</a>');
+    expect(email.html).toContain('>Shabbos 18.3-22.5 TEXT</a>');
   });
 });

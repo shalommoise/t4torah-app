@@ -2,7 +2,7 @@
 // Send log: `npm run sends:log -- [--date=YYYY-MM-DD]`
 //
 // Prints what send_log holds for a date as JSON: one entry per
-// program/channel/mode. Read-only. Replaces GET /api/v1/sends/log.
+// program/channel/mode/audience. Read-only. Replaces GET /api/v1/sends/log.
 //
 // Exit codes: 0 ok, 1 failure, 2 usage error.
 

@@ -26,13 +26,12 @@ describe('getChazara', () => {
       range: 'Shabbos 22.6 - Eiruvin 1.9',
       perakim: 'Shabbos 7-8',
       links: {
-        text: `${BUCKET}/mishna/chazara/shabbos_22.6-eiruvin_1.9_text.pdf`,
-        summary: `${BUCKET}/mishna/chazara/shabbos_22.6-eiruvin_1.9_summary.pdf`,
+        text: `${BUCKET}/mishna/chazara/shabbos_22.6-eiruvin_1.9.pdf`,
         perakim: `${BUCKET}/mishna/chazara/shabbos_7-8.pdf`,
       },
     });
     expect(getContent).toHaveBeenCalledWith('2026-11-14');
-    expect(exists).toHaveBeenCalledTimes(3);
+    expect(exists).toHaveBeenCalledTimes(2);
   });
 
   test('is null on a day that is not a chazara Friday, without any lookups', async () => {
@@ -46,33 +45,33 @@ describe('getChazara', () => {
   });
 
   test('throws when the TEXT PDF is missing', async () => {
-    const exists = jest.fn(async (url) => !url.endsWith('_text.pdf'));
+    const exists = jest.fn(async (url) => !url.endsWith('eiruvin_1.9.pdf'));
 
     await expect(
       getChazara(friday, { bucketUrl: BUCKET }, { getContent: async () => shabbos, exists })
     ).rejects.toThrow(
-      `Chazara TEXT PDF not found in the bucket: ${BUCKET}/mishna/chazara/shabbos_22.6-eiruvin_1.9_text.pdf`
+      `Chazara TEXT PDF not found in the bucket: ${BUCKET}/mishna/chazara/shabbos_22.6-eiruvin_1.9.pdf`
     );
   });
 
-  test('leaves out summaries that are not in the bucket', async () => {
-    const exists = jest.fn(async (url) => url.endsWith('_text.pdf'));
+  test('leaves out the perakim summary when it is not in the bucket', async () => {
+    const exists = jest.fn(async (url) => url.endsWith('eiruvin_1.9.pdf'));
 
     const chazara = await getChazara(friday, { bucketUrl: BUCKET }, { getContent: async () => shabbos, exists });
 
     expect(chazara).toEqual({
       range: 'Shabbos 22.6 - Eiruvin 1.9',
       perakim: 'Shabbos 7-8',
-      links: { text: `${BUCKET}/mishna/chazara/shabbos_22.6-eiruvin_1.9_text.pdf`, summary: null, perakim: null },
+      links: { text: `${BUCKET}/mishna/chazara/shabbos_22.6-eiruvin_1.9.pdf`, perakim: null },
     });
   });
 
-  test('checks only the range PDFs when Shabbos has no perakim', async () => {
+  test('checks only the week PDF when Shabbos has no perakim', async () => {
     const exists = jest.fn().mockResolvedValue(true);
     const chazara = await getChazara(friday, { bucketUrl: BUCKET }, { getContent: async () => null, exists });
     expect(chazara.perakim).toBeNull();
     expect(chazara.links.perakim).toBeNull();
-    expect(exists).toHaveBeenCalledTimes(2);
+    expect(exists).toHaveBeenCalledTimes(1);
   });
 
   test('throws without a bucket URL', async () => {

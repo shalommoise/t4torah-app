@@ -22,6 +22,7 @@ describe('getSendLog', () => {
         program: 'time4nach',
         channel: 'whatsapp',
         mode: 'live',
+        audience: '',
         status: 'failed',
         provider_message_id: null,
         created_at: createdAt,
@@ -36,6 +37,7 @@ describe('getSendLog', () => {
           program: 'time4nach',
           channel: 'whatsapp',
           mode: 'live',
+          audience: '',
           status: 'failed',
           providerMessageId: null,
           createdAt,
@@ -53,6 +55,7 @@ describe('getSendLog', () => {
         program: 'time4mishna',
         channel: 'email',
         mode: 'live',
+        audience: 'list1',
         status: 'claimed',
         attempts: 2,
         provider_message_id: null,
@@ -63,7 +66,7 @@ describe('getSendLog', () => {
 
     const { entries } = await getSendLog({ date: '2026-09-28' });
 
-    expect(entries[0]).toMatchObject({ status: 'claimed', attempts: 2, updatedAt });
+    expect(entries[0]).toMatchObject({ audience: 'list1', status: 'claimed', attempts: 2, updatedAt });
   });
 
   test('returns an empty list for a date with no attempts', async () => {

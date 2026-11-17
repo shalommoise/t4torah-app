@@ -27,7 +27,7 @@ const {
  * @property {boolean} ok
  * @property {string} [id]
  * @property {string} [error]
- * @property {boolean} [skipped] Already `sent` for this date and mode; not sent again.
+ * @property {boolean} [skipped] Already `sent` for this date, mode and audience; not sent again.
  * @property {string} [logError] Sent, but recording the outcome in send_log failed.
  * @property {boolean} [uncertain] The provider may or may not have accepted it;
  *   send_log is left `claimed` so it is never resent automatically.
@@ -46,6 +46,13 @@ const {
 const PROVIDER_ID_MAX_LENGTH = 255;
 
 const errorMessage = (error) => (error && error.message) || String(error);
+
+/**
+ * The audience part of a send_log key: the Mailchimp audience ID for email when
+ * Mailchimp is configured, otherwise ''. Keying on it means a send to a test
+ * audience doesn't mark the date as sent for the real audience (or vice versa).
+ */
+const audienceFor = (channel, mailchimp) => (channel === 'email' && mailchimp ? mailchimp.audienceId : '');
 
 // Only the Time4Mishna email becomes the chazara email on a chazara Friday.
 const usesChazara = (program) => program === 'time4mishna';
@@ -150,10 +157,10 @@ const claimKey = async (key, force) => {
  *   resent; reported as needing attention unless `force`.
  * - Any send_log error before sending blocks the send, to avoid sending twice.
  */
-const sendChannel = async ({ date, program, channel, mode, force, message, channelSenders }) => {
+const sendChannel = async ({ date, program, channel, mode, audience, force, message, channelSenders }) => {
   const base = (sender) => ({ program, channel, sender: sender.name });
   const failAll = (error) => channelSenders.map((sender) => ({ ...base(sender), ok: false, error }));
-  const key = { date, program, channel, mode };
+  const key = { date, program, channel, mode, audience };
 
   let claim;
   try {
@@ -205,7 +212,7 @@ const getStatus = (results) => {
 /**
  * Runs the daily send for one date: content → send-day rules → render → send
  * via every sender for each program. Each program/channel is sent at most once
- * per date and mode: a run must claim its send_log row first, so concurrent
+ * per date, mode and audience (the Mailchimp audience ID for email): a run must claim its send_log row first, so concurrent
  * runs can't both send. `force` claims regardless of the row's status.
  *
  * Live senders are used only when `dryRun` is explicitly `false`.
@@ -283,7 +290,8 @@ const runDailySend = async ({
     const entries = new Map();
     for (const channel of activeChannels) {
       const channelSenders = senders.filter((sender) => sender.channel === channel);
-      const channelEntries = await sendChannel({ date, program, channel, mode, force, message, channelSenders });
+      const audience = audienceFor(channel, mailchimp);
+      const channelEntries = await sendChannel({ date, program, channel, mode, audience, force, message, channelSenders });
       channelSenders.forEach((sender, index) => entries.set(sender, channelEntries[index]));
     }
     results.push(...senders.map((sender) => entries.get(sender)));

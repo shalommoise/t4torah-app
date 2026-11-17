@@ -7,15 +7,15 @@ const { isChazaraFriday, getChazaraParts, getChazaraLinks } = require('./render/
  * @typedef {object} Chazara
  * @property {string} range The week's range, e.g. `Shabbos 18.3-22.5`.
  * @property {string|null} perakim The Shabbos perakim, e.g. `Shabbos 5-6`.
- * @property {{ text: string, summary: string|null, perakim: string|null }} links
- *   `summary` / `perakim` are `null` when that summary isn't in the bucket.
+ * @property {{ text: string, perakim: string|null }} links
+ *   `perakim` is `null` when the perakim summary isn't in the bucket.
  */
 
 /**
  * The chazara for a Friday: the week's range, the Shabbos perakim and their
  * PDF links, keeping only the PDFs that are in the bucket. `null` on any other
- * day. The week's TEXT is required; the summaries are optional (many aren't
- * written yet), so a missing one is left out of the email. Throws when the
+ * day. The week's PDF is required; the perakim summary is optional (many
+ * aren't written yet), so a missing one is left out of the email. Throws when the
  * notices are malformed, BUCKET_PATH is unset or the TEXT PDF is missing, so
  * the email is never sent with a broken link.
  *
@@ -34,8 +34,8 @@ const getChazara = async (content, { bucketUrl }, { getContent = getDailyContent
   const parts = getChazaraParts(content, shabbosContent);
   const links = getChazaraLinks(parts, bucketUrl);
 
-  const [hasText, hasSummary, hasPerakim] = await Promise.all(
-    [links.text, links.summary, links.perakim].map((url) => (url ? exists(url) : false))
+  const [hasText, hasPerakim] = await Promise.all(
+    [links.text, links.perakim].map((url) => (url ? exists(url) : false))
   );
   if (!hasText) {
     throw new Error(`Chazara TEXT PDF not found in the bucket: ${links.text}`);
@@ -44,7 +44,6 @@ const getChazara = async (content, { bucketUrl }, { getContent = getDailyContent
     ...parts,
     links: {
       text: links.text,
-      summary: hasSummary ? links.summary : null,
       perakim: hasPerakim ? links.perakim : null,
     },
   };

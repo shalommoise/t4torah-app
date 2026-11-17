@@ -16,9 +16,9 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-const key = { date: '2026-09-28', program: 'time4mishna', channel: 'email', mode: 'dry-run' };
-const keyParams = ['2026-09-28', 'time4mishna', 'email', 'dry-run'];
-const KEY_WHERE = /WHERE send_date = \? AND program = \? AND channel = \? AND mode = \?/;
+const key = { date: '2026-09-28', program: 'time4mishna', channel: 'email', mode: 'live', audience: 'list1' };
+const keyParams = ['2026-09-28', 'time4mishna', 'email', 'live', 'list1'];
+const KEY_WHERE = /WHERE send_date = \? AND program = \? AND channel = \? AND mode = \? AND audience = \?/;
 
 describe('claimSendLog', () => {
   test('inserts a claimed row with placeholders and returns true', async () => {
@@ -27,9 +27,18 @@ describe('claimSendLog', () => {
     await expect(claimSendLog(key)).resolves.toBe(true);
 
     const [sql, params] = query.mock.calls[0];
-    expect(sql).toMatch(/INSERT INTO send_log \(send_date, program, channel, mode, status, attempts\)\s+VALUES \(\?, \?, \?, \?, 'claimed', 1\)/);
+    expect(sql).toMatch(/INSERT INTO send_log \(send_date, program, channel, mode, audience, status, attempts\)\s+VALUES \(\?, \?, \?, \?, \?, 'claimed', 1\)/);
     expect(sql).not.toMatch(/IGNORE|ON DUPLICATE/);
     expect(params).toEqual(keyParams);
+  });
+
+  test("defaults a missing audience to '' (no audience: WhatsApp, or dry-run without Mailchimp)", async () => {
+    query.mockResolvedValue([{ affectedRows: 1 }]);
+    const { audience, ...noAudience } = key;
+
+    await claimSendLog(noAudience);
+
+    expect(query.mock.calls[0][1]).toEqual(['2026-09-28', 'time4mishna', 'email', 'live', '']);
   });
 
   test('returns false on a duplicate key (already claimed)', async () => {
@@ -70,7 +79,7 @@ describe('forceClaimSendLog', () => {
     await expect(forceClaimSendLog(key)).resolves.toBe(true);
 
     const [sql, params] = query.mock.calls[0];
-    expect(sql).toMatch(/VALUES \(\?, \?, \?, \?, 'claimed', 1\)\s+ON DUPLICATE KEY UPDATE status = 'claimed', attempts = attempts \+ 1, provider_message_id = NULL/);
+    expect(sql).toMatch(/VALUES \(\?, \?, \?, \?, \?, 'claimed', 1\)\s+ON DUPLICATE KEY UPDATE status = 'claimed', attempts = attempts \+ 1, provider_message_id = NULL/);
     expect(params).toEqual(keyParams);
   });
 });
@@ -104,7 +113,7 @@ describe('selectSendLog', () => {
     await expect(selectSendLog(key)).resolves.toBe(rows);
 
     const [sql, params] = query.mock.calls[0];
-    expect(sql).toMatch(/SELECT \* FROM send_log WHERE send_date = \? AND program = \? AND channel = \? AND mode = \?/);
+    expect(sql).toMatch(/SELECT \* FROM send_log WHERE send_date = \? AND program = \? AND channel = \? AND mode = \? AND audience = \?/);
     expect(params).toEqual(keyParams);
   });
 });
