@@ -45,7 +45,7 @@ Every route below needs `SENDS_ADMIN_TOKEN`: as `Authorization: Bearer $SENDS_AD
   - Example: `curl -H "Authorization: Bearer $SENDS_ADMIN_TOKEN" http://localhost:3000/admin/time4tefilla/status`
 
 - `POST /admin/time4tefilla/uploads`
-  - `multipart/form-data`: `audio` (OGG/Opus voice note, M4A or MP3; up to 50 MB), `title` (the shiur title, also the email subject), `mode` (`dry-run` (default), `test` or `live`).
+  - `multipart/form-data`: `audio` (OGG/Opus voice note, MP4/M4A or MP3; up to 50 MB; any video track is dropped), `title` (the shiur title, also the email subject), `mode` (`dry-run` (default), `test` or `live`).
   - Converts to a mono 64 kbps MP3 with ffmpeg, then:
     - `dry-run`: writes the MP3, the email HTML and a JSON of the planned requests to `OUTBOX_DIR/<date>/time4tefilla-<title>.*`; creates nothing and doesn't touch `send_log`.
     - `test` / `live`: creates (or reuses, by title) the Castos episode on the test show / Time4Tefilla show, checks its MP3 URL returns 200, then creates the Mailchimp campaign for the test audience / Time4Tefilla audience. Before 05:15 Europe/London (`SEND_TIME`, `CASTOS_PUBLISH_TIME`) both are scheduled for 05:15; after it, both go out at once.

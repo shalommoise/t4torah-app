@@ -41,6 +41,7 @@ describe('detectUploadFormat', () => {
   test.each([
     ['WhatsApp voice note (Ogg/Opus)', ogg(), 'ogg'],
     ['m4a', m4a(), 'm4a'],
+    ['WhatsApp audio saved as .mp4', Buffer.concat([Buffer.from([0, 0, 0, 0x1c]), Buffer.from('ftypisom'), Buffer.alloc(40)]), 'm4a'],
     ['mp3', mp3(), 'mp3'],
     ['wav', Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE'), Buffer.alloc(20)]), null],
     ['empty', Buffer.alloc(0), null],
@@ -76,7 +77,7 @@ describe('convertToMp3', () => {
     const spawn = fakeSpawn(writesMp3);
     await expect(convertToMp3(Buffer.from('not audio at all'), { spawn, tmpDir })).rejects.toMatchObject({
       status: 400,
-      message: 'The upload is not an OGG/Opus voice note, M4A or MP3 file',
+      message: 'The upload is not an OGG/Opus voice note, MP4/M4A or MP3 file',
     });
     expect(spawn).not.toHaveBeenCalled();
   });

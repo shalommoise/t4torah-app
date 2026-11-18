@@ -74,7 +74,7 @@ Replaces the manual Time4Tefilla send (download the WhatsApp audio, convert it, 
 1. Install ffmpeg on the machine running the app (`sudo apt install ffmpeg`). `npm start` logs `[time4tefilla] upload ready (ffmpeg version …)`, or `UPLOADS WILL FAIL` if ffmpeg is missing.
 2. Set the `TEFILLA_*`, `CASTOS_TEFILLA_PODCAST_ID` and `MAILCHIMP_TEFILLA_*` / `MAILCHIMP_TEST_AUDIENCE_ID` variables (see `.env.example`), plus `SENDS_ADMIN_TOKEN`. On an existing database, run `db/migrations/003_send_log_time4tefilla.sql` once.
 3. Open `http://localhost:3000/admin/time4tefilla`. The browser asks you to sign in: type anything as the user name and `SENDS_ADMIN_TOKEN` as the password.
-4. Choose the audio file the rabbi sent (WhatsApp voice note, M4A or MP3), type the shiur title exactly as he wrote it (e.g. `877. Which ‘Good Years’ Do We Refer To?`) and pick a mode:
+4. Choose the audio file the rabbi sent (WhatsApp voice note or audio file: OGG/Opus, MP4/M4A or MP3), type the shiur title exactly as he wrote it (e.g. `877. Which ‘Good Years’ Do We Refer To?`) and pick a mode:
    - **Dry run**: converts and renders only. Listen to the MP3 and open the email in `outbox/<date>/time4tefilla-…`. Nothing is created anywhere.
    - **Test**: a real episode on the Castos test show and a real campaign to the test audience.
    - **Live**: the Time4Tefilla show and audience (asks you to confirm).

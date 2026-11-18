@@ -20,7 +20,8 @@ const fail = (message, status) => Object.assign(new Error(message), { status });
 
 /**
  * The upload's format from its first bytes: `ogg` (WhatsApp voice notes are
- * Opus in an Ogg container), `m4a` or `mp3`; `null` for anything else.
+ * Opus in an Ogg container), `m4a` (any MP4 file: WhatsApp audio saved as
+ * .mp4 is AAC in MP4) or `mp3`; `null` for anything else.
  *
  * @param {Buffer} buffer
  * @returns {'ogg'|'m4a'|'mp3'|null}
@@ -79,7 +80,7 @@ const runFfmpeg = (args, { spawn, timeoutMs }) =>
   });
 
 /**
- * Converts an uploaded OGG/Opus, M4A or MP3 to a mono 64 kbps MP3. Anything
+ * Converts an uploaded OGG/Opus, MP4/M4A or MP3 to a mono 64 kbps MP3. Anything
  * else is refused (status 400) before ffmpeg runs.
  *
  * @param {Buffer} input
@@ -92,7 +93,7 @@ const runFfmpeg = (args, { spawn, timeoutMs }) =>
 const convertToMp3 = async (input, { spawn = childProcess.spawn, tmpDir = os.tmpdir(), timeoutMs = CONVERT_TIMEOUT_MS } = {}) => {
   const inputFormat = detectUploadFormat(input);
   if (!inputFormat) {
-    throw fail('The upload is not an OGG/Opus voice note, M4A or MP3 file', 400);
+    throw fail('The upload is not an OGG/Opus voice note, MP4/M4A or MP3 file', 400);
   }
 
   const dir = await fs.mkdtemp(path.join(tmpDir, 't4t-tefilla-'));

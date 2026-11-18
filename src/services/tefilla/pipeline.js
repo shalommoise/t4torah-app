@@ -100,7 +100,7 @@ const campaignRequests = ({ email, date, shiurKey, mode, mailchimp }) => {
  * Runs the Time4Tefilla send for one shiur.
  *
  * @param {object} options
- * @param {Buffer} options.audio The uploaded OGG/Opus, M4A or MP3.
+ * @param {Buffer} options.audio The uploaded OGG/Opus, MP4/M4A or MP3.
  * @param {string} options.title The shiur title, e.g. `877. Which ‘Good Years’ Do We Refer To?`.
  * @param {ReturnType<import('../../config/tefilla').getTefillaConfig>} options.config For the mode to run.
  * @param {object} [options.deps] Replacements for tests: convertToMp3, castosClient, mailchimpClient,
