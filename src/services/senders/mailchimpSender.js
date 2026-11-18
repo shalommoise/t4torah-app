@@ -3,19 +3,11 @@ const path = require('path');
 const { createDailyMessage } = require('../render/dailyMessage');
 const { createMailchimpClient } = require('../mailchimp/client');
 const { getCampaignProblem, buildCampaignRequests, planDelivery } = require('../mailchimp/campaign');
-
-// Mailchimp campaign statuses (GET /campaigns/{id} → status).
-const GOING_OUT = ['schedule', 'sending', 'sent'];
-const NOT_GOING_OUT = ['save', 'paused', 'canceled'];
+const { deliverCampaign, GOING_OUT, NOT_GOING_OUT } = require('../mailchimp/deliverCampaign');
 
 const DEFAULT_OUTBOX_DIR = 'outbox';
 
 const errorMessage = (error) => (error && error.message) || String(error);
-
-const describeDelivery = (delivery) =>
-  delivery.action === 'schedule'
-    ? `scheduled for ${delivery.at.toISOString()}`
-    : `sent now (late; send time was ${delivery.at.toISOString()})`;
 
 const requireMailchimpConfig = (config) => {
   if (!config.mailchimp) {
@@ -53,58 +45,6 @@ const createMailchimpSender = (config = {}) => {
 
   const log = (message, text) => logger.log(`[live] mailchimp ${message.program} ${message.date}: ${text}`);
 
-  const outcome = (message, campaignId, delivery, campaign) => {
-    const recipients = campaign.recipients ? campaign.recipients.recipient_count : undefined;
-    log(
-      message,
-      `campaign ${campaignId} ${describeDelivery(delivery)} (status ${campaign.status}` +
-        `${recipients !== undefined ? `, ${recipients} recipients` : ''})`
-    );
-    return { ok: true, id: campaignId };
-  };
-
-  /** After the schedule/send call succeeded: confirm the status. */
-  const verify = async (message, campaignId, delivery) => {
-    let campaign;
-    try {
-      campaign = await client.getCampaign(campaignId);
-    } catch (error) {
-      // The schedule/send call itself succeeded, so treat it as sent.
-      log(message, `campaign ${campaignId} ${describeDelivery(delivery)}; status not verified: ${errorMessage(error)}`);
-      return { ok: true, id: campaignId };
-    }
-    if (GOING_OUT.includes(campaign.status)) {
-      return outcome(message, campaignId, delivery, campaign);
-    }
-    if (NOT_GOING_OUT.includes(campaign.status)) {
-      return { ok: false, error: `Campaign ${campaignId} has status ${campaign.status} after ${delivery.action}` };
-    }
-    return {
-      ok: false,
-      uncertain: true,
-      error: `Campaign ${campaignId} has unexpected status ${campaign.status} after ${delivery.action}`,
-    };
-  };
-
-  /** After the schedule/send call failed: was it accepted anyway? */
-  const resolveAfterError = async (message, campaignId, delivery, actionError) => {
-    const failure = `${errorMessage(actionError)} (campaign ${campaignId})`;
-    let campaign;
-    try {
-      campaign = await client.getCampaign(campaignId);
-    } catch (error) {
-      return { ok: false, uncertain: true, error: `${failure}; status check failed: ${errorMessage(error)}` };
-    }
-    if (GOING_OUT.includes(campaign.status)) {
-      log(message, `${delivery.action} reported an error but Mailchimp has it: ${errorMessage(actionError)}`);
-      return outcome(message, campaignId, delivery, campaign);
-    }
-    if (NOT_GOING_OUT.includes(campaign.status)) {
-      return { ok: false, error: `${failure}; campaign status is ${campaign.status}, nothing sent` };
-    }
-    return { ok: false, uncertain: true, error: `${failure}; campaign status is ${campaign.status}` };
-  };
-
   return {
     name: 'mailchimp-email',
     channel: 'email',
@@ -127,29 +67,12 @@ const createMailchimpSender = (config = {}) => {
         return { ok: false, error: errorMessage(error) };
       }
 
-      const requests = buildCampaignRequests(message, mailchimp);
-      let campaignId;
-      try {
-        campaignId = (await client.createCampaign(requests.campaign)).id;
-        if (!campaignId) {
-          return { ok: false, error: 'Mailchimp created a campaign without an id' };
-        }
-        await client.setContent(campaignId, requests.content);
-      } catch (error) {
-        const draft = campaignId ? ` (draft campaign ${campaignId} left unsent)` : '';
-        return { ok: false, error: `${errorMessage(error)}${draft}` };
-      }
-
-      try {
-        if (delivery.action === 'schedule') {
-          await client.scheduleCampaign(campaignId, delivery.at);
-        } else {
-          await client.sendCampaign(campaignId);
-        }
-      } catch (error) {
-        return resolveAfterError(message, campaignId, delivery, error);
-      }
-      return verify(message, campaignId, delivery);
+      return deliverCampaign({
+        client,
+        requests: buildCampaignRequests(message, mailchimp),
+        delivery,
+        log: (text) => log(message, text),
+      });
     },
   };
 };

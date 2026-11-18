@@ -3,9 +3,10 @@ const { zonedTimeToUtc } = require('../../utils/londonDate');
 // Pure helpers that turn a rendered DailyMessage into Mailchimp requests.
 // Shared by the live sender and the dry-run preview so both build the same thing.
 
-// Programs that go to the Mailchimp audience. Time4Nach is out of scope for
-// now; sending it would reach the same audience as Time4Mishna.
-const MAILCHIMP_PROGRAMS = ['time4mishna'];
+// Programs that go to Mailchimp. Time4Nach is out of scope for now; sending it
+// would reach the same audience as Time4Mishna. Time4Tefilla has its own
+// audience and is sent by the Time4Tefilla pipeline, never the daily send.
+const MAILCHIMP_PROGRAMS = ['time4mishna', 'time4tefilla'];
 
 // Mailchimp's unsubscribe merge tag. Set EMAIL_UNSUBSCRIBE_URL to this.
 const UNSUBSCRIBE_TAG = '*|UNSUB|*';
@@ -96,6 +97,7 @@ module.exports = {
   MAILCHIMP_PROGRAMS,
   UNSUBSCRIBE_TAG,
   MIN_SCHEDULE_LEAD_MS,
+  zonedToday,
   getCampaignProblem,
   buildCampaignRequests,
   planDelivery,

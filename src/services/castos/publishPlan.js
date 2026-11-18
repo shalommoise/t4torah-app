@@ -63,4 +63,4 @@ const computePublishPlan = (now, timeZone, { date, publishTime = DEFAULT_PUBLISH
   return { mode: 'publish_now' };
 };
 
-module.exports = { DEFAULT_PUBLISH_TIME, computePublishPlan };
+module.exports = { DEFAULT_PUBLISH_TIME, computePublishPlan, zonedParts };

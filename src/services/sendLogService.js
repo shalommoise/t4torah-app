@@ -8,6 +8,7 @@ const { isValidGregorianDate } = require('./dailyContentService');
  * @property {'email'|'whatsapp'} channel
  * @property {'dry-run'|'live'} mode
  * @property {string} audience Mailchimp audience ID for an email send; '' when none.
+ * @property {string} shiurKey The Time4Tefilla shiur (e.g. '877'); '' for the daily programs.
  * @property {'claimed'|'sent'|'failed'} status `claimed` = in progress, or interrupted mid-send.
  * @property {number} attempts
  * @property {string|null} providerMessageId
@@ -21,6 +22,7 @@ const toEntry = (row) => ({
   channel: row.channel,
   mode: row.mode,
   audience: row.audience,
+  shiurKey: row.shiur_key || '',
   status: row.status,
   attempts: row.attempts,
   providerMessageId: row.provider_message_id,
