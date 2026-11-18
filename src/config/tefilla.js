@@ -19,10 +19,12 @@ const MODES = ['dry-run', 'test', 'live'];
 
 const DEFAULTS = {
   TEFILLA_SEND_MODE: 'dry-run',
+  TEFILLA_NEXT_DAY_AFTER: '16:00',
   OUTBOX_DIR: 'outbox',
 };
 
 const PODCAST_ID_PATTERN = /^\d+$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const isBlank = (value) => value === undefined || value === null || String(value).trim() === '';
 
@@ -72,6 +74,9 @@ const collect = (problems, read, prefix) => {
  * published after the email goes out, so CASTOS_PUBLISH_TIME may not be later
  * than SEND_TIME.
  *
+ * Uploads from TEFILLA_NEXT_DAY_AFTER (16:00 by default) until midnight go out
+ * at the send time the next morning; it must be later than SEND_TIME.
+ *
  * @param {'dry-run'|'test'|'live'} mode
  * @param {Record<string, string|undefined>} [env]
  * @returns {{
@@ -79,6 +84,7 @@ const collect = (problems, read, prefix) => {
  *   timeZone: string,
  *   publishTime: string,
  *   sendTime: string,
+ *   nextDayAfter: string,
  *   outboxDir: string,
  *   castos: { apiKey: string, podcastId: string } | null,
  *   mailchimp: ReturnType<typeof getMailchimpConfig> | null,
@@ -153,6 +159,12 @@ const getTefillaConfig = (mode, env = process.env) => {
   if (castosBase && mailchimp && castosBase.timeZone !== mailchimp.sendTimeZone) {
     problems.push('Castos and Mailchimp must use the same SEND_TIMEZONE');
   }
+  const nextDayAfter = readValue(env, 'TEFILLA_NEXT_DAY_AFTER');
+  if (!TIME_PATTERN.test(nextDayAfter)) {
+    problems.push(`TEFILLA_NEXT_DAY_AFTER must be HH:MM, e.g. 16:00 (got "${nextDayAfter}")`);
+  } else if (mailchimp && nextDayAfter <= mailchimp.sendTime) {
+    problems.push(`TEFILLA_NEXT_DAY_AFTER (${nextDayAfter}) must be later than SEND_TIME (${mailchimp.sendTime})`);
+  }
 
   if (problems.length) {
     throw new Error(`Invalid Time4Tefilla config (${mode}): ${problems.join('; ')}`);
@@ -163,6 +175,7 @@ const getTefillaConfig = (mode, env = process.env) => {
     timeZone: mailchimp.sendTimeZone,
     publishTime: castosBase.publishTime,
     sendTime: mailchimp.sendTime,
+    nextDayAfter,
     outboxDir: readValue(env, 'OUTBOX_DIR'),
     castos: sends ? { apiKey: castosBase.apiKey, podcastId: live ? tefillaPodcastId : castosBase.testPodcastId } : null,
     mailchimp: sends ? mailchimp : null,

@@ -14,6 +14,7 @@ const AUDIO_URL = 'https://episodes.castos.com/time4tefilla/877-which-good-years
 const BEFORE = new Date('2026-11-17T03:00:00Z');
 const AFTER = new Date('2026-11-17T09:30:00Z');
 const JUST_BEFORE = new Date('2026-11-17T05:12:00Z');
+const EVENING = new Date('2026-11-17T22:28:00Z');
 
 const mailchimp = {
   apiKey: 'key-us21',
@@ -30,6 +31,7 @@ const config = (mode = 'live', overrides = {}) => ({
   timeZone: 'Europe/London',
   publishTime: '05:15',
   sendTime: '05:15',
+  nextDayAfter: '16:00',
   outboxDir: 'outbox-test',
   castos: mode === 'dry-run' ? null : { apiKey: 'castos-key', podcastId: mode === 'live' ? '300' : '100' },
   mailchimp: mode === 'dry-run' ? null : { ...mailchimp, audienceId: mode === 'live' ? 'tefilla-list' : 'test-list' },
@@ -169,6 +171,18 @@ describe('live send', () => {
     expect(result.status).toBe('sent');
   });
 
+  test('from 16:00: both are scheduled for 05:15 the next morning', async () => {
+    const { deps } = makeDeps({ now: EVENING });
+    const result = await run('live', deps);
+
+    expect(deps.sendLog.claim.mock.calls[0][0]).toMatchObject({ date: '2026-11-18', shiurKey: '877' });
+    expect(deps.castosClient.createEpisode.mock.calls[0][1].post_date).toBe('2026-11-18 05:15:00');
+    expect(deps.mailchimpClient.scheduleCampaign).toHaveBeenCalledWith('cmp1', new Date('2026-11-18T05:15:00Z'));
+    expect(deps.mailchimpClient.sendCampaign).not.toHaveBeenCalled();
+    expect(deps.mailchimpClient.createCampaign.mock.calls[0][0].settings.title).toBe('time4tefilla 2026-11-18 #877');
+    expect(result.status).toBe('scheduled');
+  });
+
   test('too close to 05:15 for Mailchimp to schedule: both go out now', async () => {
     const { deps } = makeDeps({ now: JUST_BEFORE });
     await run('live', deps);
@@ -191,11 +205,30 @@ describe('live send', () => {
     expect(lines.join('\n')).toContain('email plan changed while publishing: send now');
   });
 
-  test('logs only the create response keys in live mode', async () => {
-    const { deps, lines } = makeDeps();
+  test('logs the episode and file from the create response, not the show settings', async () => {
+    const { deps, lines } = makeDeps({
+      createResponse: {
+        success: true,
+        message: 'Episode created!',
+        episode: {
+          id: 555,
+          post_title: CLEAN_TITLE,
+          post_content: '<p>show notes</p>',
+          podcast_id: '300',
+          episode_status_id: 7,
+          podcast: { apple_claim_token: 'secret-claim-token' },
+        },
+        file: { id: 9, file_name: 'x.mp3', file_size: 1923449, file_duration: '00:04:01', file_path: AUDIO_URL },
+      },
+    });
     await run('live', deps);
-    expect(lines.join('\n')).toContain('create response keys ["success","episode","file"]');
-    expect(lines.join('\n')).not.toContain('"file_name"');
+    const log = lines.join('\n');
+    expect(log).toContain(
+      `castos: created {"success":true,"message":"Episode created!","episode":{"id":555,"title":"${CLEAN_TITLE}","podcast_id":"300","status_id":7},` +
+        `"file":{"id":9,"name":"x.mp3","size":1923449,"duration":"00:04:01","url":"${AUDIO_URL}"}}`
+    );
+    expect(log).not.toContain('secret-claim-token');
+    expect(log).not.toContain('show notes');
   });
 
   test('falls back to GET /episodes/{id} when the create response has no audio URL', async () => {
@@ -317,7 +350,7 @@ describe('send_log: the same shiur never goes out twice', () => {
 });
 
 describe('test mode', () => {
-  test('uses the test show and audience, marks the campaign TEST and logs the full create response', async () => {
+  test('uses the test show and audience and marks the campaign TEST', async () => {
     const { deps, lines } = makeDeps();
     const result = await run('test', deps);
 
@@ -326,7 +359,7 @@ describe('test mode', () => {
     expect(campaign.recipients).toEqual({ list_id: 'test-list' });
     expect(campaign.settings.title).toBe('TEST time4tefilla 2026-11-17 #877');
     expect(deps.sendLog.claim.mock.calls[0][0]).toMatchObject({ mode: 'live', audience: 'test-list' });
-    expect(lines.join('\n')).toContain(`create response {"success":true,"episode":{"id":555},"file":{"url":"${AUDIO_URL}"`);
+    expect(lines.join('\n')).toContain('castos: created {"success":true,"episode":{"id":555},"file":{"name":"x.mp3"}}');
     expect(result.audience).toBe('test-list');
   });
 });

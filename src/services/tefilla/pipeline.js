@@ -125,7 +125,13 @@ const runTefillaPipeline = async ({ audio, title: rawTitle, config, deps = {} })
   const shiurKey = shiurKeyFor(title);
   const slug = slugFor(title);
 
-  const plan = planTefillaSend({ now: clock(), timeZone: config.timeZone, publishTime: config.publishTime, sendTime: config.sendTime });
+  const plan = planTefillaSend({
+    now: clock(),
+    timeZone: config.timeZone,
+    publishTime: config.publishTime,
+    sendTime: config.sendTime,
+    nextDayAfter: config.nextDayAfter,
+  });
   log(`"${title}" (shiur ${shiurKey}): ${describePlan(plan)}`);
 
   const converted = await (deps.convertToMp3 || convertToMp3)(audio);
@@ -224,6 +230,23 @@ const finishQuietly = async (sendLog, key, outcome, log) => {
 };
 
 /**
+ * The parts of Castos's create response worth logging: the episode and its
+ * file, without the show's settings (which include tokens) or the show notes.
+ */
+const summariseCreateResponse = (response) => {
+  const body = response || {};
+  const episode = body.episode || {};
+  const file = body.file || episode.file || {};
+  return {
+    success: body.success,
+    message: body.message,
+    errors: body.errors,
+    episode: { id: episode.id, title: episode.post_title, podcast_id: episode.podcast_id, post_date: episode.post_date, status_id: episode.episode_status_id },
+    file: { id: file.id, name: file.file_name, size: file.file_size, duration: file.file_duration, import_status: file.import_status, url: file.file_path },
+  };
+};
+
+/**
  * Creates the episode, or reuses the show's episode with the same title (an
  * earlier attempt, or a manual upload), and finds its hosted MP3 URL.
  */
@@ -242,12 +265,7 @@ const publishEpisode = async ({ config, episodeFields, mp3, title, deps, log }) 
   }
 
   const response = await client.createEpisode(podcastId, episodeFields, mp3);
-  if (config.mode === 'test') {
-    // The spec doesn't document this body; log all of it while testing.
-    log(`castos: create response ${JSON.stringify(response)}`);
-  } else {
-    log(`castos: create response keys ${JSON.stringify(Object.keys(response || {}))}`);
-  }
+  log(`castos: created ${JSON.stringify(summariseCreateResponse(response))}`);
   const episodeId = getCreatedEpisodeId(response);
   let audioUrl = findEpisodeAudioUrl(response);
   if (!audioUrl) {

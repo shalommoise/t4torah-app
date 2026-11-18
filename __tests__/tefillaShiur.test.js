@@ -36,7 +36,7 @@ describe('shiur helpers', () => {
 
 describe('planTefillaSend', () => {
   const plan = (iso, times = {}) =>
-    planTefillaSend({ now: new Date(iso), timeZone: 'Europe/London', publishTime: '05:15', sendTime: '05:15', ...times });
+    planTefillaSend({ now: new Date(iso), timeZone: 'Europe/London', publishTime: '05:15', sendTime: '05:15', nextDayAfter: '16:00', ...times });
 
   test('before 05:15 (GMT): both scheduled for 05:15 that day', () => {
     const result = plan('2026-11-17T02:00:00Z');
@@ -58,11 +58,33 @@ describe('planTefillaSend', () => {
     expect(plan('2026-11-17T00:10:00Z').date).toBe('2026-11-17');
   });
 
-  test('after 05:15: both now', () => {
-    const result = plan('2026-11-17T22:00:00Z');
+  test('between 05:15 and 16:00: both now', () => {
+    const result = plan('2026-11-17T09:30:00Z');
+    expect(result.date).toBe('2026-11-17');
     expect(result.castos).toEqual({ mode: 'publish_now' });
     expect(result.email).toMatchObject({ action: 'send', late: true });
     expect(describePlan(result)).toBe('episode published now, email sent now');
+    expect(plan('2026-11-17T15:59:00Z').email.action).toBe('send');
+  });
+
+  test('from 16:00 to midnight: both scheduled for 05:15 the next morning', () => {
+    for (const iso of ['2026-11-17T16:00:00Z', '2026-11-17T22:28:00Z', '2026-11-17T23:59:00Z']) {
+      expect(plan(iso)).toEqual({
+        date: '2026-11-18',
+        castos: { mode: 'schedule', post_date: '2026-11-18 05:15:00', at: new Date('2026-11-18T05:15:00Z') },
+        email: { action: 'schedule', at: new Date('2026-11-18T05:15:00Z') },
+      });
+    }
+  });
+
+  test('the 16:00 cutoff is London time: 15:30Z in summer is 16:30 BST', () => {
+    const result = plan('2026-07-01T15:30:00Z');
+    expect(result.date).toBe('2026-07-02');
+    expect(result.email.at).toEqual(new Date('2026-07-02T04:15:00Z'));
+  });
+
+  test('the next day across a month end', () => {
+    expect(plan('2026-11-30T20:00:00Z').castos.post_date).toBe('2026-12-01 05:15:00');
   });
 
   test('inside the 5 minutes Mailchimp needs: both now, never an email before its episode', () => {

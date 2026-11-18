@@ -78,7 +78,7 @@ Replaces the manual Time4Tefilla send (download the WhatsApp audio, convert it, 
    - **Dry run**: converts and renders only. Listen to the MP3 and open the email in `outbox/<date>/time4tefilla-…`. Nothing is created anywhere.
    - **Test**: a real episode on the Castos test show and a real campaign to the test audience.
    - **Live**: the Time4Tefilla show and audience (asks you to confirm).
-5. Press **Upload** and wait (up to a couple of minutes). Before 05:15 London time the episode and email are scheduled for 05:15; after 05:15 they go out straight away. The page shows the campaign and episode, or what went wrong.
+5. Press **Upload** and wait (up to a couple of minutes). Before 05:15 London time the episode and email are scheduled for 05:15 that morning; from 16:00 (`TEFILLA_NEXT_DAY_AFTER`) until midnight, for 05:15 the next morning; between 05:15 and 16:00 they go out straight away. The page shows the campaign and episode, or what went wrong.
 
 `TEFILLA_SEND_MODE` (default `dry-run`) is the most the server allows, so a local copy can't send by accident. Each shiur goes out once per audience: its number (`877`) is recorded in `send_log`, and uploading it again is refused. If a run fails after Castos (say the audio check), upload again: the episode with the same title is reused rather than duplicated. API details: [API_ROUTES.md](API_ROUTES.md#time4tefilla-upload-admin-only).
 

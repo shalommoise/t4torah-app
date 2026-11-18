@@ -37,6 +37,7 @@ describe('getTefillaConfig', () => {
       timeZone: 'Europe/London',
       publishTime: '05:15',
       sendTime: '05:15',
+      nextDayAfter: '16:00',
       outboxDir: 'outbox',
       castos: null,
       mailchimp: null,
@@ -67,6 +68,10 @@ describe('getTefillaConfig', () => {
     );
   });
 
+  test('TEFILLA_NEXT_DAY_AFTER can move the cutoff', () => {
+    expect(getTefillaConfig('live', fullEnv({ TEFILLA_NEXT_DAY_AFTER: '21:00' })).nextDayAfter).toBe('21:00');
+  });
+
   test('test needs the test audience', () => {
     expect(() => getTefillaConfig('test', fullEnv({ MAILCHIMP_TEST_AUDIENCE_ID: '' }))).toThrow(
       'MAILCHIMP_TEST_AUDIENCE_ID is required for a test send'
@@ -82,6 +87,12 @@ describe('getTefillaConfig', () => {
       'the episode would come out after the email',
       { CASTOS_PUBLISH_TIME: '05:30', SEND_TIME: '05:15' },
       'CASTOS_PUBLISH_TIME (05:30) must not be later than SEND_TIME (05:15)',
+    ],
+    ['a bad next-day cutoff', { TEFILLA_NEXT_DAY_AFTER: '4pm' }, 'TEFILLA_NEXT_DAY_AFTER must be HH:MM, e.g. 16:00 (got "4pm")'],
+    [
+      'the next-day cutoff is before the send time',
+      { TEFILLA_NEXT_DAY_AFTER: '05:00' },
+      'TEFILLA_NEXT_DAY_AFTER (05:00) must be later than SEND_TIME (05:15)',
     ],
   ])('refuses when %s', (_name, overrides, message) => {
     expect(() => getTefillaConfig('live', fullEnv(overrides))).toThrow(message);

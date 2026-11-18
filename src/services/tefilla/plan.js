@@ -1,10 +1,14 @@
-const { computePublishPlan } = require('../castos/publishPlan');
-const { planDelivery, zonedToday } = require('../mailchimp/campaign');
+const { computePublishPlan, zonedParts } = require('../castos/publishPlan');
+const { planDelivery } = require('../mailchimp/campaign');
+const { addDays } = require('../../utils/londonDate');
 
 /**
  * When the Time4Tefilla episode and email go out, using the daily send's
- * helpers and times: processed before the send time (05:15 Europe/London by
- * default), both are scheduled for that time today; after it, both go out now.
+ * helpers and times (05:15 Europe/London by default):
+ * - before the send time: both are scheduled for that time today;
+ * - from `nextDayAfter` (16:00 by default) to midnight: both are scheduled
+ *   for the send time tomorrow morning;
+ * - in between: both go out now.
  *
  * Mailchimp needs 5 minutes' notice to schedule, so just before the send time
  * the email goes out at once; the episode is then published at once too, so
@@ -15,14 +19,16 @@ const { planDelivery, zonedToday } = require('../mailchimp/campaign');
  * @param {string} options.timeZone
  * @param {string} options.publishTime HH:MM (CASTOS_PUBLISH_TIME)
  * @param {string} options.sendTime HH:MM (SEND_TIME)
+ * @param {string} options.nextDayAfter HH:MM (TEFILLA_NEXT_DAY_AFTER); must be later than sendTime
  * @returns {{
  *   date: string,
  *   castos: { mode: 'schedule', post_date: string, at: Date } | { mode: 'publish_now' },
  *   email: { action: 'schedule', at: Date } | { action: 'send', late: true, at: Date },
  * }}
  */
-const planTefillaSend = ({ now, timeZone, publishTime, sendTime }) => {
-  const date = zonedToday(now, timeZone);
+const planTefillaSend = ({ now, timeZone, publishTime, sendTime, nextDayAfter }) => {
+  const { date: today, time } = zonedParts(now, timeZone);
+  const date = time.slice(0, 5) >= nextDayAfter ? addDays(today, 1) : today;
   const email = planDelivery({ date, now, sendTime, sendTimeZone: timeZone });
   const castos = computePublishPlan(now, timeZone, { date, publishTime });
   return {
